@@ -225,11 +225,13 @@ describe('advancePeg', () => {
 
   it('counts strokes correctly for a completed hole', () => {
     const gs = createInitialGolfScore('p1');
-    const hole = DEFAULT_COURSE.holes[0]; // par 4, 5 total pegholes
-    const { updated } = advancePeg(gs, hole.par, DEFAULT_COURSE.holes);
+    const hole = DEFAULT_COURSE.holes[0];
+    const pathA = hole.paths[0];
+    const stepsToComplete = pathA.pegholes.length - 1; // tee→cup on path A, no hazards
+    const { updated } = advancePeg(gs, stepsToComplete, DEFAULT_COURSE.holes);
     const hs = updated.holeScores[0];
-    expect(hs.strokes).toBe(hole.par);
-    expect(hs.relativeToPar).toBe(0);
+    expect(hs.strokes).toBe(stepsToComplete);
+    expect(hs.relativeToPar).toBe(stepsToComplete - hole.par);
   });
 
   it('carries currentHoleStrokes across multiple advance calls', () => {

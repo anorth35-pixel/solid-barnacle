@@ -1,21 +1,18 @@
 import type { Course, GolfHole, GolfPath, Peghole, PegholeType } from '../types/board.js';
 
-// Course: 18 holes, total par varies by path choice.
-// Each hole has 3 paths of DIFFERENT lengths:
-//   A (Safe):    longest — no hazards, guaranteed but slower
-//   B (Moderate): medium — 1–3 moderate hazards
-//   C (Risky):   shortest — most hazards, fast if clean but penalties can hurt
+// Course: 18 holes with par 3, 4, or 5.
+// Each hole has 3 paths of DIFFERENT lengths within the par-determined range:
+//   Par 3 paths: 3–5 intermediate pegholes (exclusive of tee and cup)
+//   Par 4 paths: 7–11 intermediate pegholes
+//   Par 5 paths: 14–20 intermediate pegholes
 //
-// Intermediate peghole counts (exclusive of tee and cup):
-//   Short holes  (par-3 style): A=5, B=4, C=3
-//   Medium holes (par-4 style): A=11, B=9, C=7
-//   Long holes   (par-5 style): A=20, B=17, C=14
-//
-// Hole par = path A intermediates + 1 (the cup stroke).
+// Path length is independent of hazard count — a short path can be
+// dangerous or clean, and a long path can be hazard-free or full of traps.
+// Players weigh each path's length AND hazard profile when choosing.
 
 // ---------------------------------------------------------------------------
-// Helper: build intermediate array — (count-1) fairways + green at end,
-// then overwrite specified positions with hazard types.
+// Helper: build an intermediate array of given length.
+// Starts as (count-1) fairways + green at end; hazards overwrite specific positions.
 function inter(count: number, ...hazards: Array<[number, PegholeType]>): PegholeType[] {
   const arr: PegholeType[] = Array(count - 1).fill('fairway');
   arr.push('green');
@@ -26,126 +23,123 @@ function inter(count: number, ...hazards: Array<[number, PegholeType]>): Peghole
 }
 
 interface HoleDef {
+  par: 3 | 4 | 5;
   handicap: number;
-  pathA: PegholeType[]; // safe, longest
-  pathB: PegholeType[]; // moderate, medium
-  pathC: PegholeType[]; // risky, shortest
+  pathA: PegholeType[];
+  pathB: PegholeType[];
+  pathC: PegholeType[];
 }
-
-// SHORT = par-6 holes (pathA has 5 intermediates)
-// MEDIUM = par-12 holes (pathA has 11 intermediates)
-// LONG = par-21 holes (pathA has 20 intermediates)
 
 const HOLE_DEFS: HoleDef[] = [
   // ── Front Nine ──────────────────────────────────────────────────────────────
-  // 1 — medium, hcp 7
-  { handicap: 7,
-    pathA: inter(11),
-    pathB: inter(9,  [0,'rough'],  [5,'sand']),
-    pathC: inter(7,  [0,'water'],  [3,'trees']) },
+  // 1 — par 4, hcp 7
+  { par: 4, handicap: 7,
+    pathA: inter(11),                                     // 11 stops, clear
+    pathB: inter(8,  [2,'rough'],   [5,'sand']),          //  8 stops, 2 hazards
+    pathC: inter(7,  [0,'water'],   [3,'trees']) },       //  7 stops, 2 hazards
 
-  // 2 — long, hcp 11
-  { handicap: 11,
-    pathA: inter(20),
-    pathB: inter(17, [2,'rough'],  [8,'sand'],   [13,'rough']),
-    pathC: inter(14, [1,'water'],  [6,'trees'],  [10,'sand']) },
+  // 2 — par 5, hcp 11
+  { par: 5, handicap: 11,
+    pathA: inter(20),                                     // 20 stops, clear
+    pathB: inter(14, [3,'rough'],   [9,'sand']),          // 14 stops, 2 hazards
+    pathC: inter(17, [1,'water'],   [7,'trees'],  [12,'sand']) }, // 17 stops, 3 hazards
 
-  // 3 — short, hcp 17
-  { handicap: 17,
-    pathA: inter(5),
-    pathB: inter(4,  [0,'rough']),
-    pathC: inter(3,  [0,'water']) },
+  // 3 — par 3, hcp 17
+  { par: 3, handicap: 17,
+    pathA: inter(5),                                      //  5 stops, clear
+    pathB: inter(3,  [0,'rough']),                        //  3 stops, 1 hazard
+    pathC: inter(4,  [1,'water']) },                      //  4 stops, 1 hazard
 
-  // 4 — medium, hcp 3
-  { handicap: 3,
-    pathA: inter(11),
-    pathB: inter(9,  [2,'rough'],  [6,'rough']),
-    pathC: inter(7,  [1,'water'],  [4,'sand']) },
+  // 4 — par 4, hcp 3
+  { par: 4, handicap: 3,
+    pathA: inter(9,  [4,'sand']),                         //  9 stops, 1 hazard
+    pathB: inter(7,  [1,'water'],   [4,'rough']),         //  7 stops, 2 hazards
+    pathC: inter(11, [3,'rough'],   [7,'rough']) },       // 11 stops, 2 mild hazards
 
-  // 5 — medium, hcp 1
-  { handicap: 1,
-    pathA: inter(11),
-    pathB: inter(9,  [1,'rough'],  [5,'trees']),
-    pathC: inter(7,  [0,'sand'],   [3,'water']) },
+  // 5 — par 4, hcp 1
+  { par: 4, handicap: 1,
+    pathA: inter(11),                                     // 11 stops, clear
+    pathB: inter(7,  [0,'sand'],    [3,'water']),         //  7 stops, 2 hazards
+    pathC: inter(9,  [2,'rough'],   [5,'trees'],  [8,'sand']) }, //  9 stops, 3 hazards
 
-  // 6 — long, hcp 13
-  { handicap: 13,
-    pathA: inter(20),
-    pathB: inter(17, [4,'trees'],  [10,'rough'], [15,'sand']),
-    pathC: inter(14, [2,'sand'],   [7,'water'],  [11,'rough']) },
+  // 6 — par 5, hcp 13
+  { par: 5, handicap: 13,
+    pathA: inter(14, [7,'rough']),                        // 14 stops, 1 mild hazard
+    pathB: inter(20),                                     // 20 stops, clear
+    pathC: inter(17, [2,'sand'],    [8,'water'],  [13,'trees']) }, // 17 stops, 3 hazards
 
-  // 7 — short, hcp 15
-  { handicap: 15,
-    pathA: inter(5),
-    pathB: inter(4,  [1,'sand']),
-    pathC: inter(3,  [1,'water']) },
+  // 7 — par 3, hcp 15
+  { par: 3, handicap: 15,
+    pathA: inter(4),                                      //  4 stops, clear
+    pathB: inter(3,  [0,'sand']),                         //  3 stops, 1 hazard
+    pathC: inter(5,  [2,'rough'],   [3,'rough']) },       //  5 stops, 2 mild hazards
 
-  // 8 — medium, hcp 5
-  { handicap: 5,
-    pathA: inter(11),
-    pathB: inter(9,  [3,'rough'],  [7,'sand']),
-    pathC: inter(7,  [1,'water'],  [5,'trees']) },
+  // 8 — par 4, hcp 5
+  { par: 4, handicap: 5,
+    pathA: inter(7),                                      //  7 stops, clear
+    pathB: inter(11, [4,'rough'],   [9,'rough']),         // 11 stops, 2 mild hazards
+    pathC: inter(9,  [1,'water'],   [5,'sand']) },        //  9 stops, 2 hazards
 
-  // 9 — medium, hcp 9
-  { handicap: 9,
-    pathA: inter(11),
-    pathB: inter(9,  [0,'trees'],  [4,'rough']),
-    pathC: inter(7,  [0,'out-of-bounds']) },
+  // 9 — par 4, hcp 9
+  { par: 4, handicap: 9,
+    pathA: inter(9),                                      //  9 stops, clear
+    pathB: inter(7,  [0,'out-of-bounds']),                //  7 stops, 1 severe hazard
+    pathC: inter(11, [2,'rough'],   [6,'trees'],  [9,'rough']) }, // 11 stops, 3 hazards
 
   // ── Back Nine ───────────────────────────────────────────────────────────────
-  // 10 — medium, hcp 10
-  { handicap: 10,
-    pathA: inter(11),
-    pathB: inter(9,  [2,'sand'],   [6,'rough']),
-    pathC: inter(7,  [2,'water'],  [5,'sand']) },
+  // 10 — par 4, hcp 10
+  { par: 4, handicap: 10,
+    pathA: inter(11),                                     // 11 stops, clear
+    pathB: inter(9,  [3,'sand'],    [7,'rough']),         //  9 stops, 2 hazards
+    pathC: inter(7,  [0,'trees'],   [4,'water']) },       //  7 stops, 2 hazards
 
-  // 11 — long, hcp 14
-  { handicap: 14,
-    pathA: inter(20),
-    pathB: inter(17, [1,'rough'],  [8,'trees'],  [14,'sand']),
-    pathC: inter(14, [0,'water'],  [5,'sand'],   [10,'water']) },
+  // 11 — par 5, hcp 14
+  { par: 5, handicap: 14,
+    pathA: inter(17, [8,'rough']),                        // 17 stops, 1 mild hazard
+    pathB: inter(14, [2,'water'],   [7,'sand']),          // 14 stops, 2 hazards
+    pathC: inter(20, [5,'rough'],   [11,'trees'], [16,'sand']) }, // 20 stops, 3 hazards
 
-  // 12 — short, hcp 18
-  { handicap: 18,
-    pathA: inter(5),
-    pathB: inter(4,  [0,'trees']),
-    pathC: inter(3,  [0,'out-of-bounds']) },
+  // 12 — par 3, hcp 18
+  { par: 3, handicap: 18,
+    pathA: inter(3),                                      //  3 stops, clear
+    pathB: inter(5,  [2,'water']),                        //  5 stops, 1 hazard
+    pathC: inter(4,  [0,'out-of-bounds']) },              //  4 stops, 1 severe hazard
 
-  // 13 — medium, hcp 4
-  { handicap: 4,
-    pathA: inter(11),
-    pathB: inter(9,  [1,'rough'],  [4,'sand']),
-    pathC: inter(7,  [0,'sand'],   [3,'water']) },
+  // 13 — par 4, hcp 4
+  { par: 4, handicap: 4,
+    pathA: inter(9,  [2,'rough']),                        //  9 stops, 1 mild hazard
+    pathB: inter(7,  [0,'sand'],    [4,'water']),         //  7 stops, 2 hazards
+    pathC: inter(11) },                                   // 11 stops, clear
 
-  // 14 — medium, hcp 2
-  { handicap: 2,
-    pathA: inter(11),
-    pathB: inter(9,  [3,'trees'],  [7,'rough']),
-    pathC: inter(7,  [1,'water'],  [5,'sand']) },
+  // 14 — par 4, hcp 2
+  { par: 4, handicap: 2,
+    pathA: inter(11),                                     // 11 stops, clear
+    pathB: inter(9,  [1,'trees'],   [6,'sand']),          //  9 stops, 2 hazards
+    pathC: inter(7,  [0,'water'],   [3,'out-of-bounds']) }, //  7 stops, 2 severe hazards
 
-  // 15 — long, hcp 12
-  { handicap: 12,
-    pathA: inter(20),
-    pathB: inter(17, [3,'rough'],  [9,'sand'],   [14,'rough']),
-    pathC: inter(14, [2,'water'],  [7,'trees'],  [12,'sand']) },
+  // 15 — par 5, hcp 12
+  { par: 5, handicap: 12,
+    pathA: inter(20),                                     // 20 stops, clear
+    pathB: inter(17, [4,'rough'],   [10,'sand'],  [15,'rough']), // 17 stops, 3 hazards
+    pathC: inter(14, [1,'water'],   [6,'trees']) },       // 14 stops, 2 hazards
 
-  // 16 — short, hcp 16
-  { handicap: 16,
-    pathA: inter(5),
-    pathB: inter(4,  [2,'rough']),
-    pathC: inter(3,  [0,'sand'],   [1,'water']) },
+  // 16 — par 3, hcp 16
+  { par: 3, handicap: 16,
+    pathA: inter(4,  [0,'rough']),                        //  4 stops, 1 mild hazard
+    pathB: inter(3),                                      //  3 stops, clear
+    pathC: inter(5,  [1,'sand'],    [3,'water']) },       //  5 stops, 2 hazards
 
-  // 17 — medium, hcp 6
-  { handicap: 6,
-    pathA: inter(11),
-    pathB: inter(9,  [0,'rough'],  [4,'trees']),
-    pathC: inter(7,  [1,'sand'],   [4,'water']) },
+  // 17 — par 4, hcp 6
+  { par: 4, handicap: 6,
+    pathA: inter(11),                                     // 11 stops, clear
+    pathB: inter(7,  [0,'rough'],   [4,'trees']),         //  7 stops, 2 hazards
+    pathC: inter(9,  [2,'water'],   [6,'sand']) },        //  9 stops, 2 hazards
 
-  // 18 — medium, hcp 8
-  { handicap: 8,
-    pathA: inter(11),
-    pathB: inter(9,  [5,'rough'],  [8,'sand']),
-    pathC: inter(7,  [2,'water'],  [5,'trees']) },
+  // 18 — par 4, hcp 8
+  { par: 4, handicap: 8,
+    pathA: inter(8,  [3,'rough']),                        //  8 stops, 1 mild hazard
+    pathB: inter(11, [5,'rough'],   [9,'sand']),          // 11 stops, 2 hazards
+    pathC: inter(7,  [1,'water'],   [4,'trees']) },       //  7 stops, 2 hazards
 ];
 
 // ---------------------------------------------------------------------------
@@ -171,13 +165,17 @@ function buildPath(
     y: 0,
   }));
 
-  const labels: Record<string, string> = { A: 'Safe', B: 'Moderate', C: 'Risky' };
+  const labels: Record<string, string> = { A: 'Route A', B: 'Route B', C: 'Route C' };
   const hazards = fairway.filter((t) => HAZARD_TYPES.has(t));
   const hazardDesc = hazards.length === 0
     ? 'Clear fairway — no hazards'
     : hazards.map((h) => describeHazard(h)).join(', ');
 
-  return { id, label: labels[id], description: hazardDesc, pegholes };
+  // Include stop count so players can compare path lengths in the dialog
+  const stopCount = fairway.length;
+  const description = `${stopCount} stop${stopCount !== 1 ? 's' : ''} · ${hazardDesc}`;
+
+  return { id, label: labels[id], description, pegholes };
 }
 
 function describeHazard(type: PegholeType): string {
@@ -192,11 +190,9 @@ function describeHazard(type: PegholeType): string {
 }
 
 function buildHole(def: HoleDef, number: number): GolfHole {
-  // Par = strokes needed to complete path A cleanly: (intermediates + cup stroke)
-  const par = def.pathA.length + 1;
   return {
     number,
-    par,
+    par: def.par,
     handicap: def.handicap,
     paths: [
       buildPath('A', def.pathA, number),
