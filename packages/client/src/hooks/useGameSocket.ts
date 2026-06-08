@@ -66,6 +66,14 @@ export function useGameSocket() {
         pegging: { ...gs.pegging, playStack, runningCount },
         golfScores: golfScores ?? gs.golfScores,
       });
+      if (scoreEvents?.length) {
+        for (const ev of scoreEvents) {
+          if (ev?.breakdown?.total > 0) {
+            const desc = ev.breakdown.items.map((it: any) => it.description).join(', ');
+            store().addToast({ type: 'info', message: desc, sub: `+${ev.breakdown.total} pts` });
+          }
+        }
+      }
       if (pegMovements?.length) {
         store().addPegMovements(pegMovements);
         checkHazardToasts(pegMovements);
@@ -84,6 +92,14 @@ export function useGameSocket() {
         pegging,
         golfScores: golfScores ?? gs.golfScores,
       });
+      if (scoreEvents?.length) {
+        for (const ev of scoreEvents) {
+          if (ev?.breakdown?.total > 0) {
+            const scorer = gs.players.find((p: any) => p.id === ev.playerId);
+            store().addToast({ type: 'info', message: `${scorer?.name ?? 'Player'} — Go for 1`, sub: '+1 pt' });
+          }
+        }
+      }
       if (pegMovements?.length) {
         store().addPegMovements(pegMovements);
         checkHoleToasts(pegMovements);

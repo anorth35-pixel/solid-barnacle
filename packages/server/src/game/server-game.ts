@@ -212,10 +212,14 @@ export class ServerGame {
       const ev = this.awardPoints(lastPlayed, bd);
       events.push(ev);
       movements.push(...this.state.pendingPegMovements.splice(0));
-      this.checkWin();
+      if (this.checkWin()) return { countReset: true, events, movements };
       this.state.pegging = resetPeggingCount(this.state.pegging);
-      // Next to play: first player after lastPlayed who still has cards
-      this.state.activePlayerSeat = this.firstWithCardsAfter(lastPlayed);
+      if (allHandsEmpty(this.state.players)) {
+        this.advanceToHandScoring();
+      } else {
+        // Next to play: first player after lastPlayed who still has cards
+        this.state.activePlayerSeat = this.firstWithCardsAfter(lastPlayed);
+      }
       return { countReset: true, events, movements };
     }
 
@@ -249,7 +253,15 @@ export class ServerGame {
         return;
       }
     }
-    // No one can play — state stays for the go chain to resolve
+    // Nobody can play — advance to next player with unplayed cards so they can call go
+    for (let i = 1; i <= pc; i++) {
+      const next = ((current + i) % pc) as PlayerSeat;
+      const p = this.state.players[next];
+      if (p.playedCards.length < p.hand.length) {
+        this.state.activePlayerSeat = next;
+        return;
+      }
+    }
   }
 
   private advanceToHandScoring(): void {
