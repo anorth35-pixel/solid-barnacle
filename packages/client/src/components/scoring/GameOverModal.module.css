@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12,9 +12,9 @@
   background: #1b3a1b;
   border: 2px solid #ffd54f;
   border-radius: 20px;
-  padding: 32px;
-  max-width: 400px;
-  width: 90%;
+  padding: 28px;
+  max-width: 440px;
+  width: 92%;
   text-align: center;
   box-shadow: 0 8px 40px rgba(0,0,0,0.6);
   display: flex;
@@ -34,17 +34,37 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .table th, .table td {
-  padding: 8px 12px;
-  text-align: left;
+  padding: 7px 10px;
+  text-align: center;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
 .table th {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  opacity: 0.6;
+  opacity: 0.55;
+  text-align: center;
+}
+
+.table td:first-child { text-align: left; }
+
+.winner td { background: rgba(255,213,79,0.08); }
+
+.under  { color: #81c784; font-weight: 600; }
+.even   { color: white; }
+.over   { color: #ef9a9a; }
+
+.penalty { color: #ff8a65; }
+
+.totalCell { font-weight: 700; }
+
+.penaltyNote {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  font-style: italic;
+  margin-top: -8px;
 }

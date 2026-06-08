@@ -67,31 +67,25 @@ function isConsecutive(orders: number[]): boolean {
 }
 
 function scoreRuns(cards: Card[]): ScoreItem[] {
-  // Find longest runs first, exclude subsets that are part of longer runs
   const items: ScoreItem[] = [];
-  const coveredSets = new Set<string>();
+  // Track found runs by card IDs to exclude subsets of longer runs
+  const foundRunIds: Set<string>[] = [];
 
   for (let size = cards.length; size >= 3; size--) {
     for (const combo of combinations(cards, size)) {
-      const orders = combo.map((c) => c.order);
-      if (isConsecutive(orders)) {
-        const key = [...orders].sort((a, b) => a - b).join(',');
-        // Check no larger run already covers this exact set
-        const alreadyCovered = [...coveredSets].some((s) => {
-          const covered = s.split(',').map(Number);
-          return orders.every((o) => covered.includes(o));
-        });
-        if (!alreadyCovered) {
-          const sorted = [...combo].sort((a, b) => a.order - b.order);
-          items.push({
-            reason: 'run',
-            cards: sorted,
-            points: size,
-            description: `Run of ${size} (${cardsDesc(sorted)}) for ${size}`,
-          });
-          coveredSets.add(key);
-        }
-      }
+      if (!isConsecutive(combo.map((c) => c.order))) continue;
+      const idSet = new Set(combo.map((c) => c.id));
+      // Skip if this run is a proper subset of any already-found longer run
+      const isSubset = foundRunIds.some((larger) => combo.every((c) => larger.has(c.id)));
+      if (isSubset) continue;
+      foundRunIds.push(idSet);
+      const sorted = [...combo].sort((a, b) => a.order - b.order);
+      items.push({
+        reason: 'run',
+        cards: sorted,
+        points: size,
+        description: `Run of ${size} (${cardsDesc(sorted)}) for ${size}`,
+      });
     }
   }
   return items;

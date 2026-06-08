@@ -35,9 +35,9 @@
 
 .tab, .tabActive {
   flex: 1;
-  padding: 8px;
+  padding: 8px 6px;
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
 }
 

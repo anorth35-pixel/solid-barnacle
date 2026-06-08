@@ -12,8 +12,9 @@ export interface HoleScore {
 export interface PlayerGolfScore {
   playerId: string;
   holeScores: HoleScore[];
-  currentHole: number;       // 1–18
+  currentHole: number;
   currentPegholeIndex: number;
+  currentHoleStrokes: number;    // strokes accumulated on the hole currently being played
   totalStrokes: number;
   totalRelativeToPar: number;
   holesCompleted: number;
@@ -37,9 +38,17 @@ export function createInitialGolfScore(playerId: string): PlayerGolfScore {
     holeScores: [],
     currentHole: 1,
     currentPegholeIndex: 0,
+    currentHoleStrokes: 0,
     totalStrokes: 0,
     totalRelativeToPar: 0,
     holesCompleted: 0,
     isFinished: false,
   };
+}
+
+// Penalty strokes added for each hole not completed at game end (per the rules table)
+export function holesNotCompletedPenalty(holesNotCompleted: number): number {
+  // Each unfinished hole is scored as double bogey (+2), which is a reasonable
+  // penalty for not reaching the cup. This approximates the official penalty table.
+  return holesNotCompleted * 2;
 }

@@ -1,4 +1,4 @@
-import type { GolfHole, PegMovement } from '../types/board.js';
+import type { GolfHole, PegMovement, PegholeType } from '../types/board.js';
 import type { PlayerGolfScore, HoleScore } from '../types/golf-score.js';
 import { applyHazard, isHazard } from './hazards.js';
 
@@ -18,50 +18,66 @@ export function advancePeg(
     holesCompleted: [],
   };
 
-  let score = { ...golfScore, holeScores: [...golfScore.holeScores] };
-  let remainingPoints = points;
+  let score = {
+    ...golfScore,
+    holeScores: [...golfScore.holeScores],
+  };
+  let remaining = points;
 
-  while (remainingPoints > 0 && !score.isFinished) {
-    const holeIndex = score.currentHole - 1;
-    const hole = holes[holeIndex];
+  while (remaining > 0 && !score.isFinished) {
+    const hole = holes[score.currentHole - 1];
     if (!hole) break;
 
     const nextIndex = score.currentPegholeIndex + 1;
-    if (nextIndex >= hole.pegholes.length) {
-      // Already at cup, shouldn't happen but guard
-      break;
-    }
+    if (nextIndex >= hole.pegholes.length) break;  // already at cup
 
     const nextPeghole = hole.pegholes[nextIndex];
-    remainingPoints--;
+
+    // Spend 1 cribbage point to move to this peghole
+    remaining--;
+    score = { ...score, currentHoleStrokes: score.currentHoleStrokes + 1 };
 
     if (isHazard(nextPeghole)) {
       const result = applyHazard(nextPeghole, nextIndex);
       movement.hazardsHit.push({ peghole: nextPeghole, result });
+      // Penalty strokes counted against the hole (don't cost cribbage points, just add to score)
       score = {
         ...score,
-        totalStrokes: score.totalStrokes + 1 + result.penaltyStrokes,
+        currentHoleStrokes: score.currentHoleStrokes + result.penaltyStrokes,
         currentPegholeIndex: result.retreatToIndex ?? nextIndex,
       };
     } else {
-      score = {
-        ...score,
-        totalStrokes: score.totalStrokes + 1,
-        currentPegholeIndex: nextIndex,
-      };
+      score = { ...score, currentPegholeIndex: nextIndex };
     }
 
-    // Check if hole completed (landed on or past cup)
+    // Hole complete: landed at or past the cup (last peghole in the sequence)
     if (score.currentPegholeIndex >= hole.pegholes.length - 1) {
-      const holeScore: HoleScore = buildHoleScore(hole, score.totalStrokes, movement.hazardsHit.map((h) => h.peghole.type as any));
+      const hazardTypes = movement.hazardsHit
+        .filter((h) => h.peghole.holeNumber === hole.number)
+        .map((h) => h.peghole.type as PegholeType);
+      const penaltyStrokes = movement.hazardsHit
+        .filter((h) => h.peghole.holeNumber === hole.number)
+        .reduce((s, h) => s + h.result.penaltyStrokes, 0);
+
+      const holeScore: HoleScore = {
+        holeNumber: hole.number,
+        par: hole.par,
+        strokes: score.currentHoleStrokes,
+        relativeToPar: score.currentHoleStrokes - hole.par,
+        hazardPenalties: penaltyStrokes,
+        hazardTypes,
+      };
+
+      movement.holesCompleted.push(hole.number);
       score = {
         ...score,
         holeScores: [...score.holeScores, holeScore],
+        totalStrokes: score.totalStrokes + score.currentHoleStrokes,
         totalRelativeToPar: score.totalRelativeToPar + holeScore.relativeToPar,
         holesCompleted: score.holesCompleted + 1,
+        currentHoleStrokes: 0,
         currentPegholeIndex: 0,
       };
-      movement.holesCompleted.push(score.currentHole);
 
       if (score.holesCompleted >= 18) {
         score = { ...score, isFinished: true, currentHole: 18 };
@@ -75,22 +91,4 @@ export function advancePeg(
   movement.toPegholeIndex = score.currentPegholeIndex;
 
   return { updated: score, movement };
-}
-
-function buildHoleScore(
-  hole: GolfHole,
-  totalStrokesAtEnd: number,
-  _hazardTypes: any[],
-): HoleScore {
-  // We need strokes just for this hole — this is tracked separately in a real impl
-  // For now use a simplified version that counts pegholes traversed
-  const strokes = hole.totalPegholes;
-  return {
-    holeNumber: hole.number,
-    par: hole.par,
-    strokes,
-    relativeToPar: strokes - hole.par,
-    hazardPenalties: 0,
-    hazardTypes: [],
-  };
 }

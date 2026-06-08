@@ -1,7 +1,8 @@
 import type { Server, Socket } from 'socket.io';
 import type { GameConfig, PlayerSeat } from '@cribbgolf/shared';
+import type { Player } from '@cribbgolf/shared';
 import {
-  createRoom, joinRoom, setReady, getRoomBySocket, getRoomByCode,
+  createRoom, joinRoom, setReady, getRoomBySocket,
   markInGame, removePlayer, toSummary,
 } from '../rooms/room-manager.js';
 import { ServerGame } from '../game/server-game.js';
@@ -12,6 +13,7 @@ const activeGames = new Map<string, ServerGame>();
 const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function registerSocketHandlers(io: Server, socket: Socket): void {
+
   // ── Lobby ────────────────────────────────────────────────────────────────
 
   socket.on('room:create', ({ playerName, config }: { playerName: string; config: Partial<GameConfig> }) => {
@@ -28,7 +30,8 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     }
     socket.join(room.code);
     const summary = toSummary(room);
-    socket.emit('room:joined', { room: summary, yourSeat: room.players.at(-1)!.seat });
+    const seat = room.players.find((p) => p.socketId === socket.id)!.seat;
+    socket.emit('room:joined', { room: summary, yourSeat: seat });
     socket.to(room.code).emit('room:updated', { room: summary });
   });
 
@@ -38,37 +41,55 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     io.to(room.code).emit('room:updated', { room: toSummary(room) });
   });
 
-  socket.on('room:leave', () => {
-    handleDisconnect(io, socket);
-  });
+  socket.on('room:leave', () => handleDisconnect(io, socket));
 
   // ── Game start ────────────────────────────────────────────────────────────
 
   socket.on('game:start', () => {
     const room = getRoomBySocket(socket.id);
     if (!room || room.hostSocketId !== socket.id) return;
-    if (room.players.some((p) => !p.ready)) return;
+
+    const isVsAI = room.config.mode === 'vs-ai';
+
+    // Non-AI games require all players to be ready
+    if (!isVsAI && room.players.some((p) => !p.ready)) return;
 
     markInGame(room.code);
-    const game = new ServerGame(
-      room.config,
-      room.players.map((p) => ({
-        id: p.socketId,
-        name: p.name,
-        type: 'human' as const,
-        seat: p.seat,
-      })),
-    );
+
+    const humanPlayers = room.players.map((p) => ({
+      id: p.socketId,
+      name: p.name,
+      type: 'human' as Player['type'],
+      seat: p.seat as PlayerSeat,
+    }));
+
+    // Fill remaining seats with AI for vs-ai mode
+    const aiPlayers: typeof humanPlayers = isVsAI
+      ? Array.from({ length: room.config.playerCount - humanPlayers.length }, (_, i) => ({
+          id: `ai-${room.code}-${humanPlayers.length + i}`,
+          name: `Computer ${i + 1}`,
+          type: 'ai' as Player['type'],
+          seat: (humanPlayers.length + i) as PlayerSeat,
+        }))
+      : [];
+
+    const game = new ServerGame(room.config, [...humanPlayers, ...aiPlayers]);
     activeGames.set(room.code, game);
     game.startGame();
-    io.to(room.code).emit('game:phase-change', { phase: game.state.phase, state: sanitizeState(game.state, '') });
 
-    // Send private hands
-    for (const player of game.state.players) {
-      io.to(player.id).emit('game:dealt', { yourHand: player.hand, dealerSeat: game.state.dealerSeat });
+    io.to(room.code).emit('game:phase-change', {
+      phase: game.state.phase,
+      state: sanitizeState(game.state),
+    });
+
+    // Send each human their private hand
+    for (const player of game.state.players.filter((p) => p.type === 'human')) {
+      io.to(player.id).emit('game:dealt', {
+        yourHand: player.hand,
+        dealerSeat: game.state.dealerSeat,
+      });
     }
 
-    // Kick off AI discards if needed
     triggerAIActions(io, room.code, game);
   });
 
@@ -78,16 +99,31 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     const room = getRoomBySocket(socket.id);
     if (!room) return;
     const game = activeGames.get(room.code);
-    if (!game) return;
+    if (!game || game.state.phase !== 'discarding') return;
 
     const ok = game.discard(socket.id, cardIds);
-    if (!ok) { socket.emit('game:error', { code: 'INVALID_DISCARD', message: 'Invalid discard' }); return; }
+    if (!ok) {
+      socket.emit('game:error', { code: 'INVALID_DISCARD', message: 'Invalid discard' });
+      return;
+    }
 
     const seat = game.state.players.findIndex((p) => p.id === socket.id);
     io.to(room.code).emit('game:discard-done', { seat });
 
-    if (game.state.phase === 'cutting') {
-      io.to(room.code).emit('game:phase-change', { phase: 'cutting', state: sanitizeState(game.state, '') });
+    if ((game.state.phase as string) === 'cutting') {
+      io.to(room.code).emit('game:phase-change', {
+        phase: 'cutting',
+        state: sanitizeState(game.state),
+      });
+      // If pone is AI, have them cut
+      const aiPone = game.poneNeedsTocut();
+      if (aiPone !== null) {
+        setTimeout(() => {
+          if (game.state.phase !== 'cutting') return;
+          const pos = Math.floor(Math.random() * 30) + 8;
+          executeCut(io, room.code, game, pos);
+        }, 800 + Math.random() * 700);
+      }
     }
   });
 
@@ -96,17 +132,7 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     if (!room) return;
     const game = activeGames.get(room.code);
     if (!game || game.state.phase !== 'cutting') return;
-
-    const events = game.cut(position);
-    io.to(room.code).emit('game:starter', { card: game.state.starterCard!, nibsEvent: events[0] });
-    io.to(room.code).emit('game:phase-change', { phase: 'pegging', state: sanitizeState(game.state, '') });
-
-    if (events.length > 0) {
-      io.to(room.code).emit('game:peg-moved', { movements: game.state.pendingPegMovements });
-      game.state.pendingPegMovements = [];
-    }
-
-    triggerAIActions(io, room.code, game);
+    executeCut(io, room.code, game, position);
   });
 
   socket.on('game:peg', ({ cardId }: { cardId: string }) => {
@@ -116,23 +142,23 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     if (!game || game.state.phase !== 'pegging') return;
 
     const result = game.playCard(socket.id, cardId);
-    if (!result) { socket.emit('game:error', { code: 'INVALID_PEG', message: 'Invalid card play' }); return; }
+    if (!result) {
+      socket.emit('game:error', { code: 'INVALID_PEG', message: 'Cannot play that card' });
+      return;
+    }
 
     const seat = game.state.players.findIndex((p) => p.id === socket.id);
+    const playedCard = game.state.players[seat].playedCards.at(-1)!;
     io.to(room.code).emit('game:card-played', {
       seat,
-      card: game.state.players[seat].playedCards.at(-1)!,
+      card: playedCard,
       runningCount: game.state.pegging.runningCount,
       scoreEvents: result.events,
       pegMovements: result.movements,
+      golfScores: game.state.golfScores,
     });
 
-    const phaseAfterPeg = game.state.phase as string;
-    if (phaseAfterPeg === 'hand-scoring') {
-      runHandScoringSequence(io, room.code, game);
-    } else {
-      triggerAIActions(io, room.code, game);
-    }
+    afterPegAction(io, room.code, game);
   });
 
   socket.on('game:go', () => {
@@ -141,18 +167,18 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     const game = activeGames.get(room.code);
     if (!game || game.state.phase !== 'pegging') return;
 
-    const seat = game.state.players.findIndex((p) => p.id === socket.id) as PlayerSeat;
     const result = game.callGo(socket.id);
-    io.to(room.code).emit('game:go', { seat });
-    if (result.events.length > 0) {
-      io.to(room.code).emit('game:count-reset', { lastSeat: seat, lastCardEvent: result.events[0] });
-    }
-    const phaseAfterGo = game.state.phase as string;
-    if (phaseAfterGo === 'hand-scoring') {
-      runHandScoringSequence(io, room.code, game);
-    } else {
-      triggerAIActions(io, room.code, game);
-    }
+    const seat = game.state.players.findIndex((p) => p.id === socket.id) as PlayerSeat;
+
+    io.to(room.code).emit('game:go-called', {
+      seat,
+      countReset: result.countReset,
+      scoreEvents: result.events,
+      pegMovements: result.movements,
+      golfScores: game.state.golfScores,
+    });
+
+    afterPegAction(io, room.code, game);
   });
 
   socket.on('game:muggins', ({ claimedItems }: { claimedItems: any[] }) => {
@@ -163,8 +189,12 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
 
     const movements = game.claimMuggins(socket.id, claimedItems);
     const seat = game.state.players.findIndex((p) => p.id === socket.id);
-    io.to(room.code).emit('game:muggins-claimed', { claimerSeat: seat, items: claimedItems, pegMovements: movements });
-    game.closeMuggins();
+    io.to(room.code).emit('game:muggins-claimed', {
+      claimerSeat: seat,
+      items: claimedItems,
+      pegMovements: movements,
+      golfScores: game.state.golfScores,
+    });
   });
 
   socket.on('game:muggins-pass', () => {
@@ -177,12 +207,51 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
 
   // ── Disconnect ─────────────────────────────────────────────────────────────
 
-  socket.on('disconnect', () => {
-    handleDisconnect(io, socket);
-  });
+  socket.on('disconnect', () => handleDisconnect(io, socket));
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
+
+function executeCut(io: Server, roomCode: string, game: ServerGame, position: number): void {
+  const events = game.cut(position);
+  io.to(roomCode).emit('game:starter', {
+    card: game.state.starterCard!,
+    nibsEvent: events[0] ?? null,
+    pegMovements: game.state.pendingPegMovements.splice(0),
+    golfScores: game.state.golfScores,
+  });
+  io.to(roomCode).emit('game:phase-change', {
+    phase: game.state.phase,
+    state: sanitizeState(game.state),
+  });
+
+  if ((game.state.phase as string) === 'game-over') {
+    io.to(roomCode).emit('game:over', {
+      winnerSeat: game.state.winner,
+      finalGolfScores: game.state.golfScores,
+    });
+    return;
+  }
+  triggerAIActions(io, roomCode, game);
+}
+
+function afterPegAction(io: Server, roomCode: string, game: ServerGame): void {
+  const phase = game.state.phase as string;
+
+  if (phase === 'game-over') {
+    io.to(roomCode).emit('game:over', {
+      winnerSeat: game.state.winner,
+      finalGolfScores: game.state.golfScores,
+    });
+    return;
+  }
+
+  if (phase === 'hand-scoring') {
+    runHandScoringSequence(io, roomCode, game);
+  } else {
+    triggerAIActions(io, roomCode, game);
+  }
+}
 
 function handleDisconnect(io: Server, socket: Socket): void {
   const result = removePlayer(socket.id);
@@ -191,10 +260,12 @@ function handleDisconnect(io: Server, socket: Socket): void {
 
   if (room.state === 'in-game') {
     io.to(room.code).emit('player:disconnected', { seat, waitingMs: RECONNECT_TIMEOUT_MS });
+    const key = `${room.code}-${seat}`;
+    clearTimeout(reconnectTimers.get(key));
     const timer = setTimeout(() => {
       activeGames.delete(room.code);
     }, RECONNECT_TIMEOUT_MS);
-    reconnectTimers.set(`${room.code}-${seat}`, timer);
+    reconnectTimers.set(key, timer);
   } else {
     io.to(room.code).emit('room:updated', { room: toSummary(room) });
   }
@@ -203,7 +274,6 @@ function handleDisconnect(io: Server, socket: Socket): void {
 
 async function runHandScoringSequence(io: Server, roomCode: string, game: ServerGame): Promise<void> {
   const pc = game.state.config.playerCount;
-  // Score pone(s) first, then dealer
   const order: PlayerSeat[] = [];
   for (let i = 1; i < pc; i++) {
     order.push(((game.state.dealerSeat + i) % pc) as PlayerSeat);
@@ -211,17 +281,27 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
   order.push(game.state.dealerSeat);
 
   for (const seat of order) {
-    await delay(800);
+    await delay(900);
     const bd = game.scoreHand(seat);
+    const movements = game.state.pendingPegMovements.splice(0);
     io.to(roomCode).emit('game:hand-score', {
       seat,
       breakdown: bd,
-      pegMovements: game.state.pendingPegMovements.splice(0),
+      pegMovements: movements,
+      golfScores: game.state.golfScores,
     });
 
+    if ((game.state.phase as string) === 'game-over') {
+      io.to(roomCode).emit('game:over', {
+        winnerSeat: game.state.winner,
+        finalGolfScores: game.state.golfScores,
+      });
+      return;
+    }
+
+    // Muggins window (only opens if missedItems were set — future enhancement)
     if (game.state.config.mugginsEnabled) {
-      const fullBd = bd; // server already computed full score
-      const missed = fullBd.missedItems ?? [];
+      const missed = bd.missedItems ?? [];
       if (missed.length > 0) {
         const muggins = game.openMugginsWindow(bd.playerId, missed);
         io.to(roomCode).emit('game:muggins-window', {
@@ -236,27 +316,20 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
         }
       }
     }
-
-    if (game.state.golfScores.some((gs) => gs.isFinished)) {
-      io.to(roomCode).emit('game:over', {
-        winnerSeat: game.state.winner,
-        finalGolfScores: game.state.golfScores,
-      });
-      return;
-    }
   }
 
-  // Score crib
-  await delay(800);
+  await delay(900);
   game.state.phase = 'crib-scoring';
   const cribBd = game.scoreCrib();
+  const cribMovements = game.state.pendingPegMovements.splice(0);
   io.to(roomCode).emit('game:crib-score', {
     seat: game.state.dealerSeat,
     breakdown: cribBd,
-    pegMovements: game.state.pendingPegMovements.splice(0),
+    pegMovements: cribMovements,
+    golfScores: game.state.golfScores,
   });
 
-  if (game.state.golfScores.some((gs) => gs.isFinished)) {
+  if ((game.state.phase as string) === 'game-over') {
     io.to(roomCode).emit('game:over', {
       winnerSeat: game.state.winner,
       finalGolfScores: game.state.golfScores,
@@ -264,65 +337,111 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
     return;
   }
 
-  await delay(2000);
+  await delay(2500);
   game.advanceRound();
-  io.to(roomCode).emit('game:phase-change', { phase: game.state.phase, state: sanitizeState(game.state, '') });
 
-  // Send new private hands
-  for (const player of game.state.players) {
-    io.to(player.id).emit('game:dealt', { yourHand: player.hand, dealerSeat: game.state.dealerSeat });
+  if ((game.state.phase as string) === 'game-over') {
+    io.to(roomCode).emit('game:over', {
+      winnerSeat: game.state.winner,
+      finalGolfScores: game.state.golfScores,
+    });
+    return;
+  }
+
+  io.to(roomCode).emit('game:phase-change', {
+    phase: game.state.phase,
+    state: sanitizeState(game.state),
+  });
+
+  for (const player of game.state.players.filter((p) => p.type === 'human')) {
+    io.to(player.id).emit('game:dealt', {
+      yourHand: player.hand,
+      dealerSeat: game.state.dealerSeat,
+    });
   }
 
   triggerAIActions(io, roomCode, game);
 }
 
 function triggerAIActions(io: Server, roomCode: string, game: ServerGame): void {
-  const activeSeat = game.state.activePlayerSeat;
-  if (activeSeat === null) return;
-  const player = game.state.players[activeSeat];
-  if (player.type !== 'ai') return;
+  // Handle discarding phase: trigger each AI player who hasn't discarded yet
+  if (game.state.phase === 'discarding') {
+    for (const player of game.getAIPlayersNeedingDiscard()) {
+      const runner = makeAIRunner(io, roomCode, game, player.seat);
+      runner.runDiscard();
+    }
+    return;
+  }
 
-  const runner = new AITurnRunner(game, activeSeat, (type, data: any) => {
+  // Handle cutting phase
+  if (game.state.phase === 'cutting') {
+    const aiPone = game.poneNeedsTocut();
+    if (aiPone !== null) {
+      setTimeout(() => {
+        if (game.state.phase !== 'cutting') return;
+        const pos = Math.floor(Math.random() * 30) + 8;
+        executeCut(io, roomCode, game, pos);
+      }, 800 + Math.random() * 700);
+    }
+    return;
+  }
+
+  // Handle pegging phase
+  if (game.state.phase === 'pegging' && game.isAITurn()) {
+    const seat = game.state.activePlayerSeat!;
+    const runner = makeAIRunner(io, roomCode, game, seat);
+    runner.runPeg();
+  }
+}
+
+function makeAIRunner(io: Server, roomCode: string, game: ServerGame, seat: PlayerSeat): AITurnRunner {
+  return new AITurnRunner(game, seat, (type, data: any) => {
     if (type === 'discard') {
-      game.discard(data.playerId, data.cardIds);
-      io.to(roomCode).emit('game:discard-done', { seat: activeSeat });
+      const ok = game.discard(data.playerId, data.cardIds);
+      if (!ok) return;
+      io.to(roomCode).emit('game:discard-done', { seat });
       if (game.state.phase === 'cutting') {
-        io.to(roomCode).emit('game:phase-change', { phase: 'cutting', state: sanitizeState(game.state, '') });
+        io.to(roomCode).emit('game:phase-change', {
+          phase: 'cutting',
+          state: sanitizeState(game.state),
+        });
+        const aiPone = game.poneNeedsTocut();
+        if (aiPone !== null) {
+          setTimeout(() => {
+            if (game.state.phase !== 'cutting') return;
+            executeCut(io, roomCode, game, Math.floor(Math.random() * 30) + 8);
+          }, 800 + Math.random() * 700);
+        }
       }
     } else if (type === 'peg') {
       const result = game.playCard(data.playerId, data.cardId);
-      if (result) {
-        io.to(roomCode).emit('game:card-played', {
-          seat: activeSeat,
-          card: player.playedCards.at(-1)!,
-          runningCount: game.state.pegging.runningCount,
-          scoreEvents: result.events,
-          pegMovements: result.movements,
-        });
-        if (game.state.phase === 'hand-scoring') runHandScoringSequence(io, roomCode, game);
-        else triggerAIActions(io, roomCode, game);
-      }
+      if (!result) return;
+      const player = game.state.players.find((p) => p.id === data.playerId)!;
+      io.to(roomCode).emit('game:card-played', {
+        seat,
+        card: player.playedCards.at(-1)!,
+        runningCount: game.state.pegging.runningCount,
+        scoreEvents: result.events,
+        pegMovements: result.movements,
+        golfScores: game.state.golfScores,
+      });
+      afterPegAction(io, roomCode, game);
     } else if (type === 'go') {
       const result = game.callGo(data.playerId);
-      io.to(roomCode).emit('game:go', { seat: activeSeat });
-      if (result.events.length > 0) {
-        io.to(roomCode).emit('game:count-reset', { lastSeat: activeSeat, lastCardEvent: result.events[0] });
-      }
-      if (game.state.phase === 'hand-scoring') runHandScoringSequence(io, roomCode, game);
-      else triggerAIActions(io, roomCode, game);
+      io.to(roomCode).emit('game:go-called', {
+        seat,
+        countReset: result.countReset,
+        scoreEvents: result.events,
+        pegMovements: result.movements,
+        golfScores: game.state.golfScores,
+      });
+      afterPegAction(io, roomCode, game);
     }
   });
-
-  if (game.state.phase === 'discarding') runner.runDiscard();
-  else if (game.state.phase === 'pegging') runner.runPeg();
 }
 
-function sanitizeState(state: any, _socketId: string): any {
-  // Don't send opponent's hand or deck contents to clients
-  return {
-    ...state,
-    deck: [],
-  };
+function sanitizeState(state: any): any {
+  return { ...state, deck: [] };
 }
 
 function delay(ms: number): Promise<void> {

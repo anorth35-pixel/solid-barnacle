@@ -1,4 +1,4 @@
-import type { GameState, GameConfig, GamePhase, PeggingState } from '@cribbgolf/shared';
+import type { GameState, GameConfig, PeggingState } from '@cribbgolf/shared';
 import type { Player, PlayerSeat } from '@cribbgolf/shared';
 import type { Card } from '@cribbgolf/shared';
 import type { ScoreBreakdown, ScoreEvent, MugginsState, ScoreItem } from '@cribbgolf/shared';
@@ -8,16 +8,18 @@ import {
   scoreHand, scorePeggingPlay, scoreNibs,
   createPeggingState, canPlayCard, hasPlayableCard, resetPeggingCount, allHandsEmpty,
   createInitialGolfScore, DEFAULT_COURSE,
+  advancePeg,
 } from '@cribbgolf/shared';
-import { advancePeg } from '@cribbgolf/shared';
-import type { PlayerGolfScore } from '@cribbgolf/shared';
 import { MUGGINS_WINDOW_MS } from '../config.js';
 
 export class ServerGame {
   state: GameState;
+  private discardedSeats = new Set<PlayerSeat>();
 
-  constructor(config: GameConfig, players: Array<{ id: string; name: string; type: Player['type']; seat: PlayerSeat }>) {
-    const course = DEFAULT_COURSE;
+  constructor(
+    config: GameConfig,
+    players: Array<{ id: string; name: string; type: Player['type']; seat: PlayerSeat }>,
+  ) {
     this.state = {
       id: crypto.randomUUID(),
       config,
@@ -43,17 +45,17 @@ export class ServerGame {
       winner: null,
       lastScoreEvents: [],
       golfScores: players.map((p) => createInitialGolfScore(p.id)),
-      course,
+      course: DEFAULT_COURSE,
       pendingPegMovements: [],
     };
   }
 
-  startGame(): ScoreEvent[] {
+  startGame(): void {
     this.state.phase = 'dealing';
-    return this.dealRound();
+    this.dealRound();
   }
 
-  private dealRound(): ScoreEvent[] {
+  private dealRound(): void {
     const d = shuffle(createDeck());
     const { hands, remaining } = deal(d, this.state.config.playerCount);
     this.state.deck = remaining;
@@ -62,6 +64,7 @@ export class ServerGame {
     this.state.pegging = createPeggingState();
     this.state.lastScoreEvents = [];
     this.state.pendingPegMovements = [];
+    this.discardedSeats = new Set();
 
     this.state.players.forEach((p, i) => {
       p.hand = hands[i];
@@ -69,23 +72,27 @@ export class ServerGame {
     });
 
     this.state.phase = 'discarding';
-    return [];
   }
 
   discard(playerId: string, cardIds: string[]): boolean {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player) return false;
+    if (!player || this.discardedSeats.has(player.seat)) return false;
+
+    const expectedCount = this.state.config.playerCount === 2 ? 2 : 1;
+    if (cardIds.length !== expectedCount) return false;
 
     const cards = cardIds.map((id) => player.hand.find((c) => c.id === id)).filter(Boolean) as Card[];
-    if (cards.length !== cardIds.length) return false;
+    if (cards.length !== expectedCount) return false;
 
     this.state.crib.push(...cards);
     player.hand = player.hand.filter((c) => !cardIds.includes(c.id));
+    this.discardedSeats.add(player.seat);
 
-    // For 3-player: dealer also takes a card from the deck for the crib
     if (this.allDiscarded()) {
-      if (this.state.config.playerCount === 3 && this.state.crib.length < 4) {
-        this.state.crib.push(this.state.deck.shift()!);
+      // For 3-player: dealer draws one extra card from the deck to complete the crib
+      if (this.state.config.playerCount === 3) {
+        const extra = this.state.deck.shift();
+        if (extra) this.state.crib.push(extra);
       }
       this.state.phase = 'cutting';
     }
@@ -93,164 +100,186 @@ export class ServerGame {
   }
 
   private allDiscarded(): boolean {
-    const expected = this.state.config.playerCount === 2 ? 4 : 3;
-    return this.state.crib.length >= expected;
+    return this.discardedSeats.size >= this.state.config.playerCount;
   }
 
   cut(position: number): ScoreEvent[] {
     const events: ScoreEvent[] = [];
-    const deck = this.state.deck;
-    const cutIndex = Math.max(1, Math.min(position, deck.length - 1));
-    const starter = deck.splice(cutIndex, 1)[0];
+    const cutIndex = Math.max(1, Math.min(position, this.state.deck.length - 1));
+    const starter = this.state.deck.splice(cutIndex, 1)[0];
     this.state.starterCard = starter;
 
     const nibsBD = scoreNibs(this.state.players[this.state.dealerSeat].id, starter);
     if (nibsBD) {
       const event = this.awardPoints(this.state.dealerSeat, nibsBD);
       events.push(event);
+      if (this.checkWin()) return events;
     }
 
     this.state.phase = 'pegging';
-    // Pone starts pegging
-    this.state.activePlayerSeat = ((this.state.dealerSeat + 1) % this.state.config.playerCount) as PlayerSeat;
+    this.state.activePlayerSeat = this.poneOf(this.state.dealerSeat);
     return events;
   }
 
   playCard(playerId: string, cardId: string): { events: ScoreEvent[]; movements: PegMovement[] } | null {
-    const playerIdx = this.state.players.findIndex((p) => p.id === playerId);
-    if (playerIdx === -1) return null;
-    const player = this.state.players[playerIdx];
+    const player = this.state.players.find((p) => p.id === playerId);
+    if (!player) return null;
+    if (player.seat !== this.state.activePlayerSeat) return null;
+
     const card = player.hand.find((c) => c.id === cardId);
     if (!card) return null;
     if (!canPlayCard(card, this.state.pegging.runningCount)) return null;
 
     player.playedCards.push(card);
-    this.state.pegging.playStack.push(card);
+    this.state.pegging.playStack = [...this.state.pegging.playStack, card];
     this.state.pegging.runningCount += card.value;
     this.state.pegging.lastPlayerToPlay = player.seat;
     this.state.pegging.goCalledBy = [];
 
-    const scoreItems = scorePeggingPlay(
-      this.state.pegging.playStack.slice(0, -1),
-      card,
-    );
+    const prevStack = this.state.pegging.playStack.slice(0, -1);
+    const scoreItems = scorePeggingPlay(prevStack, card);
+
+    let totalPoints = scoreItems.reduce((s, i) => s + i.points, 0);
     const events: ScoreEvent[] = [];
     const movements: PegMovement[] = [];
 
-    let totalPoints = scoreItems.reduce((s, i) => s + i.points, 0);
+    const handsNowEmpty = allHandsEmpty(this.state.players);
 
-    // Check if all hands empty after this play
-    if (allHandsEmpty(this.state.players)) {
-      if (this.state.pegging.runningCount !== 31) {
-        totalPoints += 1; // last card
-      }
+    // 31 exact: score 2, then reset (last-card is not awarded on 31)
+    if (this.state.pegging.runningCount === 31) {
+      const bd: ScoreBreakdown = { playerId: player.id, phase: 'pegging', items: scoreItems, total: totalPoints };
       if (totalPoints > 0) {
-        const bd: ScoreBreakdown = {
-          playerId: player.id,
-          phase: 'pegging',
-          items: scoreItems,
-          total: totalPoints,
-        };
         const ev = this.awardPoints(player.seat, bd);
         events.push(ev);
         movements.push(...this.state.pendingPegMovements.splice(0));
-      }
-      this.advanceToHandScoring();
-    } else if (this.state.pegging.runningCount === 31) {
-      if (totalPoints > 0) {
-        const bd: ScoreBreakdown = { playerId: player.id, phase: 'pegging', items: scoreItems, total: totalPoints };
-        const ev = this.awardPoints(player.seat, bd);
-        events.push(ev);
-        movements.push(...this.state.pendingPegMovements.splice(0));
+        if (this.checkWin()) return { events, movements };
       }
       this.state.pegging = resetPeggingCount(this.state.pegging);
+    } else if (handsNowEmpty) {
+      // Last card (not 31): award 1 extra
+      totalPoints += 1;
+      scoreItems.push({ reason: 'last-card', cards: [card], points: 1, description: 'Last card for 1' });
+      const bd: ScoreBreakdown = { playerId: player.id, phase: 'pegging', items: scoreItems, total: totalPoints };
+      const ev = this.awardPoints(player.seat, bd);
+      events.push(ev);
+      movements.push(...this.state.pendingPegMovements.splice(0));
+      if (this.checkWin()) return { events, movements };
+      this.advanceToHandScoring();
+      return { events, movements };
     } else if (totalPoints > 0) {
       const bd: ScoreBreakdown = { playerId: player.id, phase: 'pegging', items: scoreItems, total: totalPoints };
       const ev = this.awardPoints(player.seat, bd);
       events.push(ev);
       movements.push(...this.state.pendingPegMovements.splice(0));
+      if (this.checkWin()) return { events, movements };
     }
 
     this.advancePeggingTurn();
     return { events, movements };
   }
 
-  callGo(playerId: string): { lastCard: boolean; events: ScoreEvent[] } {
+  callGo(playerId: string): { countReset: boolean; events: ScoreEvent[]; movements: PegMovement[] } {
     const player = this.state.players.find((p) => p.id === playerId);
-    if (!player) return { lastCard: false, events: [] };
+    if (!player) return { countReset: false, events: [], movements: [] };
 
     if (!this.state.pegging.goCalledBy.includes(player.seat)) {
-      this.state.pegging.goCalledBy.push(player.seat);
+      this.state.pegging.goCalledBy = [...this.state.pegging.goCalledBy, player.seat];
     }
 
-    const activePlayers = this.state.players.filter(
-      (p) => !allHandsEmpty([p]) || false,
-    );
-    const allWentGo = this.state.pegging.goCalledBy.length >= this.state.config.playerCount - 1;
-
     const events: ScoreEvent[] = [];
-    if (allWentGo && this.state.pegging.lastPlayerToPlay !== null) {
-      const lastPlayer = this.state.players[this.state.pegging.lastPlayerToPlay];
+    const movements: PegMovement[] = [];
+
+    // "All went go" means every player who still has cards AND can't play has called go.
+    // Players with no remaining unplayed cards don't need to call go.
+    const playersWithCards = this.state.players.filter(
+      (p) => p.playedCards.length < p.hand.length,
+    );
+    const lastPlayed = this.state.pegging.lastPlayerToPlay;
+    const othersWithCards = playersWithCards.filter((p) => p.seat !== lastPlayed);
+    const allOthersGone = othersWithCards.every((p) =>
+      this.state.pegging.goCalledBy.includes(p.seat),
+    );
+
+    if (allOthersGone && lastPlayed !== null) {
+      // Award 1 point to the last player to have played a card
+      const lastPlayer = this.state.players[lastPlayed];
       const bd: ScoreBreakdown = {
         playerId: lastPlayer.id,
         phase: 'pegging',
-        items: [{ reason: 'last-card', cards: [], points: 1, description: 'Go for 1' }],
+        items: [{ reason: 'go', cards: [], points: 1, description: 'Go for 1' }],
         total: 1,
       };
-      const ev = this.awardPoints(this.state.pegging.lastPlayerToPlay, bd);
+      const ev = this.awardPoints(lastPlayed, bd);
       events.push(ev);
+      movements.push(...this.state.pendingPegMovements.splice(0));
+      this.checkWin();
       this.state.pegging = resetPeggingCount(this.state.pegging);
+      // Next to play: first player after lastPlayed who still has cards
+      this.state.activePlayerSeat = this.firstWithCardsAfter(lastPlayed);
+      return { countReset: true, events, movements };
     }
 
     this.advancePeggingTurn();
-    return { lastCard: allWentGo, events };
+    return { countReset: false, events, movements };
+  }
+
+  private firstWithCardsAfter(seat: PlayerSeat): PlayerSeat | null {
+    const pc = this.state.config.playerCount;
+    for (let i = 1; i <= pc; i++) {
+      const s = ((seat + i) % pc) as PlayerSeat;
+      const p = this.state.players[s];
+      if (p.playedCards.length < p.hand.length) return s;
+    }
+    return null;
   }
 
   private advancePeggingTurn(): void {
-    if (allHandsEmpty(this.state.players)) return;
+    if (allHandsEmpty(this.state.players)) {
+      this.advanceToHandScoring();
+      return;
+    }
     const pc = this.state.config.playerCount;
-    let next = ((this.state.activePlayerSeat! + 1) % pc) as PlayerSeat;
-    let tries = 0;
-    while (tries < pc) {
+    const current = this.state.activePlayerSeat ?? this.state.dealerSeat;
+    // Find next player who has an unplayed card that fits under 31
+    for (let i = 1; i <= pc; i++) {
+      const next = ((current + i) % pc) as PlayerSeat;
       const p = this.state.players[next];
       if (hasPlayableCard(p.hand, p.playedCards, this.state.pegging.runningCount)) {
         this.state.activePlayerSeat = next;
         return;
       }
-      next = ((next + 1) % pc) as PlayerSeat;
-      tries++;
     }
+    // No one can play — state stays for the go chain to resolve
   }
 
   private advanceToHandScoring(): void {
     this.state.phase = 'hand-scoring';
-    this.state.activePlayerSeat = ((this.state.dealerSeat + 1) % this.state.config.playerCount) as PlayerSeat;
+    this.state.activePlayerSeat = this.poneOf(this.state.dealerSeat);
   }
 
   scoreHand(seat: PlayerSeat): ScoreBreakdown {
     const player = this.state.players[seat];
     const bd = scoreHand(player.id, player.hand, this.state.starterCard!, false);
-    const movements = this.awardPointsFromBreakdown(seat, bd);
-    this.state.pendingPegMovements.push(...movements);
+    this.awardPointsFromBreakdown(seat, bd);
     return bd;
   }
 
   scoreCrib(): ScoreBreakdown {
     const dealer = this.state.players[this.state.dealerSeat];
     const bd = scoreHand(dealer.id, this.state.crib, this.state.starterCard!, true);
-    const movements = this.awardPointsFromBreakdown(this.state.dealerSeat, bd);
-    this.state.pendingPegMovements.push(...movements);
+    this.awardPointsFromBreakdown(this.state.dealerSeat, bd);
     return bd;
   }
 
   advanceRound(): void {
     if (this.checkWin()) return;
-    this.state.dealerSeat = ((this.state.dealerSeat + 1) % this.state.config.playerCount) as PlayerSeat;
+    this.state.dealerSeat = this.poneOf(this.state.dealerSeat);
     this.state.roundNumber++;
     this.dealRound();
   }
 
   private checkWin(): boolean {
+    if (this.state.winner !== null) return true;
     const winner = this.state.golfScores.find((gs) => gs.isFinished);
     if (winner) {
       this.state.winner = this.state.players.find((p) => p.id === winner.playerId)!.seat;
@@ -261,8 +290,7 @@ export class ServerGame {
   }
 
   private awardPoints(seat: PlayerSeat, breakdown: ScoreBreakdown): ScoreEvent {
-    const movements = this.awardPointsFromBreakdown(seat, breakdown);
-    this.state.pendingPegMovements.push(...movements);
+    this.awardPointsFromBreakdown(seat, breakdown);
     const gs = this.state.golfScores.find((g) => g.playerId === this.state.players[seat].id)!;
     return {
       playerId: this.state.players[seat].id,
@@ -273,10 +301,10 @@ export class ServerGame {
     };
   }
 
-  private awardPointsFromBreakdown(seat: PlayerSeat, breakdown: ScoreBreakdown): PegMovement[] {
+  private awardPointsFromBreakdown(seat: PlayerSeat, breakdown: ScoreBreakdown): void {
     const player = this.state.players[seat];
     const gsIndex = this.state.golfScores.findIndex((g) => g.playerId === player.id);
-    if (gsIndex === -1) return [];
+    if (gsIndex === -1 || breakdown.total === 0) return;
 
     const { updated, movement } = advancePeg(
       this.state.golfScores[gsIndex],
@@ -284,7 +312,7 @@ export class ServerGame {
       this.state.course.holes,
     );
     this.state.golfScores[gsIndex] = updated;
-    return [movement];
+    this.state.pendingPegMovements.push(movement);
   }
 
   openMugginsWindow(scoringPlayerId: string, missedItems: ScoreItem[]): MugginsState {
@@ -309,10 +337,33 @@ export class ServerGame {
     const claimerSeat = this.state.players.findIndex((p) => p.id === claimerPlayerId) as PlayerSeat;
     const total = items.reduce((s, i) => s + i.points, 0);
     const bd: ScoreBreakdown = { playerId: claimerPlayerId, phase: 'hand', items, total };
-    return this.awardPointsFromBreakdown(claimerSeat, bd);
+    this.awardPointsFromBreakdown(claimerSeat, bd);
+    return this.state.pendingPegMovements.splice(0);
   }
 
   closeMuggins(): void {
     this.state.muggins = null;
+  }
+
+  private poneOf(dealerSeat: PlayerSeat): PlayerSeat {
+    return ((dealerSeat + 1) % this.state.config.playerCount) as PlayerSeat;
+  }
+
+  isAITurn(): boolean {
+    const seat = this.state.activePlayerSeat;
+    if (seat === null) return false;
+    return this.state.players[seat]?.type === 'ai';
+  }
+
+  getAIPlayersNeedingDiscard(): Player[] {
+    return this.state.players.filter(
+      (p) => p.type === 'ai' && !this.discardedSeats.has(p.seat),
+    );
+  }
+
+  poneNeedsTocut(): PlayerSeat | null {
+    if (this.state.phase !== 'cutting') return null;
+    const pone = this.poneOf(this.state.dealerSeat);
+    return this.state.players[pone].type === 'ai' ? pone : null;
   }
 }

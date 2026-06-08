@@ -1,7 +1,6 @@
 import type { ServerGame } from './server-game.js';
 import type { PlayerSeat } from '@cribbgolf/shared';
-import { chooseDiscard, choosePegCard } from '@cribbgolf/shared';
-import { hasPlayableCard } from '@cribbgolf/shared';
+import { chooseDiscard, choosePegCard, hasPlayableCard } from '@cribbgolf/shared';
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
