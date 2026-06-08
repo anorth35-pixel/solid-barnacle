@@ -87,7 +87,10 @@ export function useGameSocket() {
 
     socket.on('game:hand-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
       store().addBreakdown(breakdown);
-      if (golfScores) store().patchGameState({ golfScores });
+      store().patchGameState({
+        phase: 'hand-scoring',
+        ...(golfScores ? { golfScores } : {}),
+      });
       if (pegMovements?.length) {
         store().addPegMovements(pegMovements);
         checkHazardToasts(pegMovements);
@@ -97,7 +100,10 @@ export function useGameSocket() {
 
     socket.on('game:crib-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
       store().addBreakdown(breakdown);
-      if (golfScores) store().patchGameState({ golfScores });
+      store().patchGameState({
+        phase: 'crib-scoring',
+        ...(golfScores ? { golfScores } : {}),
+      });
       if (pegMovements?.length) {
         store().addPegMovements(pegMovements);
         checkHoleToasts(pegMovements);
