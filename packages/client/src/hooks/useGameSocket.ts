@@ -32,6 +32,11 @@ export function useGameSocket() {
     socket.on('game:phase-change', ({ phase, state }: any) => {
       store().setGameState(state);
       if (phase === 'discarding') {
+        // Sync myHand from server state directly in case game:dealt arrives late or is missed
+        const mySeat = store().mySeat;
+        if (mySeat !== null && state.players?.[mySeat]?.hand?.length > 0) {
+          store().setMyHand(state.players[mySeat].hand);
+        }
         navigate(`/game/${state.id}`);
       }
     });

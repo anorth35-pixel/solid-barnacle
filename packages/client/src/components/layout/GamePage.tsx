@@ -40,7 +40,7 @@ export default function GamePage() {
         {phase === 'dealing' && (
           <div className={styles.dealing}>⛳ Dealing cards…</div>
         )}
-        {phase === 'discarding' && <DiscardPhase />}
+        {phase === 'discarding' && <DiscardPhase key={gameState.roundNumber} />}
         {phase === 'cutting' && <CutPhase />}
         {phase === 'pegging' && <PeggingPhase />}
         {(phase === 'hand-scoring' || phase === 'crib-scoring') && (

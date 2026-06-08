@@ -249,7 +249,19 @@ function afterPegAction(io: Server, roomCode: string, game: ServerGame): void {
   }
 
   if (phase === 'hand-scoring') {
-    runHandScoringSequence(io, roomCode, game);
+    runHandScoringSequence(io, roomCode, game).catch((err) => {
+      console.error(`[scoring] room ${roomCode}:`, err);
+      // Recovery: advance to next round so the game isn't permanently stuck
+      try { game.advanceRound(); } catch (_) { /* ignore */ }
+      io.to(roomCode).emit('game:phase-change', {
+        phase: game.state.phase,
+        state: sanitizeState(game.state),
+      });
+      for (const player of game.state.players.filter((p) => p.type === 'human')) {
+        io.to(player.id).emit('game:dealt', { yourHand: player.hand, dealerSeat: game.state.dealerSeat });
+      }
+      triggerAIActions(io, roomCode, game);
+    });
   } else {
     triggerAIActions(io, roomCode, game);
   }
