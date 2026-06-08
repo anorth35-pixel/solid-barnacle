@@ -1,0 +1,69 @@
+.card {
+  width: 72px;
+  height: 100px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  user-select: none;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.small {
+  width: 52px;
+  height: 72px;
+  font-size: 0.8rem;
+  padding: 4px;
+}
+
+.red { color: #c62828; }
+.black { color: #212121; }
+
+.back {
+  background: linear-gradient(135deg, #1a237e 25%, #283593 50%, #1a237e 75%);
+  background-size: 20px 20px;
+  border: 2px solid #303f9f;
+}
+
+.selected {
+  transform: translateY(-12px);
+  box-shadow: 0 8px 20px rgba(255,215,0,0.5);
+  border-color: #ffd54f;
+  border-width: 2px;
+}
+
+.selectable {
+  cursor: pointer;
+}
+
+.selectable:hover:not(.selected) {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.rankTop {
+  align-self: flex-start;
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.suit {
+  font-size: 1.4em;
+  line-height: 1;
+}
+
+.rankBottom {
+  align-self: flex-end;
+  transform: rotate(180deg);
+  font-size: 0.9em;
+  line-height: 1;
+}

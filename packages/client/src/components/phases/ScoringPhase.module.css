@@ -1,0 +1,24 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.heading {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.breakdowns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.waiting {
+  opacity: 0.6;
+  font-style: italic;
+}

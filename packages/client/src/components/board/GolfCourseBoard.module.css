@@ -1,0 +1,51 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.scorecard {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table th, .table td {
+  padding: 5px 8px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.table th {
+  background: rgba(0,0,0,0.3);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.totalRow td {
+  font-weight: 700;
+  background: rgba(0,0,0,0.2);
+}
+
+.eagle { background: #ffd54f22; color: #ffd54f; font-weight: 700; }
+.birdie { background: #c8e6c922; color: #81c784; font-weight: 600; }
+.par { color: inherit; }
+.bogey { background: #ffccbc22; color: #ff8a65; }
+.doubleBogey { background: #ffcdd222; color: #ef9a9a; }
