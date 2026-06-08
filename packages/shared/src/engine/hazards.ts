@@ -10,9 +10,9 @@ export function applyHazard(peghole: Peghole, currentIndex: number): HazardResul
       };
     case 'trees':
       return {
-        penaltyStrokes: 0,
-        retreatToIndex: Math.max(0, currentIndex - 2),
-        description: 'Trees — retreat 2 pegholes',
+        penaltyStrokes: 1,
+        retreatToIndex: null,
+        description: 'Trees — 1 penalty stroke',
       };
     case 'sand':
       return {
@@ -23,8 +23,8 @@ export function applyHazard(peghole: Peghole, currentIndex: number): HazardResul
     case 'water':
       return {
         penaltyStrokes: 2,
-        retreatToIndex: Math.max(0, peghole.index - 1),
-        description: 'Water hazard — 2 penalty strokes, retreat 1 peghole',
+        retreatToIndex: peghole.index,
+        description: 'Water hazard — 2 penalty strokes',
       };
     case 'out-of-bounds':
       return {
