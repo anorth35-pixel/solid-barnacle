@@ -7,22 +7,23 @@
 
 /* ── Pane ─────────────────────────────────────────────────────────────── */
 .pane {
-  background: rgba(255,255,255,0.04);
-  border-radius: 10px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.08);
   overflow: hidden;
 }
 .myPane {
   border-color: rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.07);
+  background: rgba(0,0,0,0.3);
 }
 
 .paneHeader {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 10px 4px;
+  padding: 7px 10px 5px;
   font-size: 0.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .playerDot {
   width: 9px;
@@ -39,17 +40,18 @@
   text-overflow: ellipsis;
 }
 .holeTag {
-  color: rgba(255,255,255,0.5);
-  font-size: 0.75rem;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.74rem;
+  white-space: nowrap;
 }
 .scoreTag {
   font-weight: 700;
   font-size: 0.82rem;
-  min-width: 28px;
+  min-width: 26px;
   text-align: right;
 }
 .choosePathBtn {
-  background: rgba(255,193,7,0.2);
+  background: rgba(255,193,7,0.18);
   border: 1px solid rgba(255,193,7,0.5);
   color: #ffc107;
   border-radius: 6px;
@@ -58,101 +60,76 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.choosePathBtn:hover { background: rgba(255,193,7,0.35); }
+.choosePathBtn:hover { background: rgba(255,193,7,0.32); }
 
-/* ── Track ────────────────────────────────────────────────────────────── */
-.trackWrapper {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.15) transparent;
-  padding: 0 8px 8px;
-}
-.trackWrapper::-webkit-scrollbar { height: 4px; }
-.trackWrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
-
-.track {
+/* ── Hole view ────────────────────────────────────────────────────────── */
+.holeView {
   display: flex;
-  align-items: center;
-  min-height: 56px;
-  position: relative;
-}
-
-.cell {
-  position: relative;
-  display: flex;
-  align-items: center;
   justify-content: center;
-  width: 36px;
-  flex-shrink: 0;
-  padding-top: 18px; /* room for hole label */
+  align-items: flex-start;
+  overflow: hidden;
 }
 
-.holeLabel {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.6rem;
-  color: rgba(255,255,255,0.45);
-  white-space: nowrap;
+.holeViewLarge {
+  max-height: 340px;
+  padding: 6px 12px 4px;
+}
+.holeViewLarge svg {
+  max-height: 340px;
+  width: 100%;
+}
+
+.holeViewSmall {
+  max-height: 160px;
+  padding: 4px 20px 3px;
+}
+.holeViewSmall svg {
+  max-height: 160px;
+  width: 100%;
+}
+
+.finishedBadge {
+  text-align: center;
+  padding: 20px;
+  font-size: 1.3rem;
+  color: #a5d6a7;
+  font-weight: 700;
+}
+
+/* ── Progress strip ───────────────────────────────────────────────────── */
+.progressStrip {
   display: flex;
+  gap: 3px;
+  padding: 5px 8px 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.progressStrip::-webkit-scrollbar { display: none; }
+
+.miniChip {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 2px;
+  border-radius: 5px;
+  padding: 3px 4px 2px;
+  min-width: 22px;
+  flex-shrink: 0;
+  gap: 1px;
 }
-.branchDot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #ffc107;
-  display: inline-block;
+.miniNum {
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
 }
-
-.connector {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 50%;
-  height: 2px;
-  background: rgba(255,255,255,0.18);
-  transform: translateY(-1px);
-  margin-top: 9px; /* align with circle center */
-}
-.connPast { background: rgba(255,255,255,0.45); }
-.connGap { background: rgba(255,255,255,0.07); }
-
-/* Also draw right half of connector on right side of circle */
-.cell::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: 50%;
-  height: 2px;
-  background: rgba(255,255,255,0.18);
-  transform: translateY(-1px);
-  margin-top: 9px;
-  pointer-events: none;
-}
-
-.peghole {
-  position: relative;
-  border-radius: 50%;
-  transition: width 0.2s, height 0.2s, box-shadow 0.2s;
-  z-index: 1;
-}
-.pegholePast {
-  opacity: 0.4;
-}
-.pegholeCurrent {
-  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+.miniScore {
+  font-size: 0.52rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 /* ── Scorecard ────────────────────────────────────────────────────────── */
 .scorecard { overflow-x: auto; }
 .scorecardToggle {
-  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -164,9 +141,14 @@
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  width: 100%;
+  text-align: left;
+  list-style: none;
 }
-.scorecardToggle:hover { background: rgba(255,255,255,0.11); }
+.scorecardToggle::-webkit-details-marker { display: none; }
+.scorecardToggle:hover { background: rgba(255,255,255,0.1); }
 .scorecardTotals { display: flex; gap: 10px; margin-left: auto; font-weight: 700; }
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -179,12 +161,17 @@
 .table th, .table td {
   padding: 4px 7px;
   text-align: center;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
-.table th { background: rgba(0,0,0,0.3); font-weight: 700; font-size: 0.72rem; text-transform: uppercase; }
+.table th {
+  background: rgba(0,0,0,0.3);
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
 .totalRow td { font-weight: 700; background: rgba(0,0,0,0.2); }
-.eagle   { color: #ffd54f; font-weight: 700; }
-.birdie  { color: #81c784; font-weight: 600; }
-.par     { }
-.bogey   { color: #ff8a65; }
+.eagle      { color: #ffd54f; font-weight: 700; }
+.birdie     { color: #81c784; font-weight: 600; }
+.par        { }
+.bogey      { color: #ff8a65; }
 .doubleBogey { color: #ef9a9a; }
