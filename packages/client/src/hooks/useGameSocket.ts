@@ -52,7 +52,7 @@ export function useGameSocket() {
       // Informational — no state change needed; phase-change event handles the transition
     });
 
-    socket.on('game:card-played', ({ seat, card, runningCount, scoreEvents, pegMovements, golfScores }: any) => {
+    socket.on('game:card-played', ({ seat, card, runningCount, activePlayerSeat, scoreEvents, pegMovements, golfScores }: any) => {
       const gs = store().gameState;
       if (!gs) return;
       const players = gs.players.map((p, i) => {
@@ -62,6 +62,7 @@ export function useGameSocket() {
       const playStack = [...gs.pegging.playStack, card];
       store().patchGameState({
         players,
+        activePlayerSeat: activePlayerSeat ?? gs.activePlayerSeat,
         pegging: { ...gs.pegging, playStack, runningCount },
         golfScores: golfScores ?? gs.golfScores,
       });
@@ -72,13 +73,17 @@ export function useGameSocket() {
       }
     });
 
-    socket.on('game:go-called', ({ seat, countReset, scoreEvents, pegMovements, golfScores }: any) => {
+    socket.on('game:go-called', ({ seat, countReset, activePlayerSeat, scoreEvents, pegMovements, golfScores }: any) => {
       const gs = store().gameState;
       if (!gs) return;
       const pegging = countReset
         ? { ...gs.pegging, playStack: [], runningCount: 0, goCalledBy: [] }
         : { ...gs.pegging, goCalledBy: [...gs.pegging.goCalledBy, seat as any] };
-      store().patchGameState({ pegging, golfScores: golfScores ?? gs.golfScores });
+      store().patchGameState({
+        activePlayerSeat: activePlayerSeat ?? gs.activePlayerSeat,
+        pegging,
+        golfScores: golfScores ?? gs.golfScores,
+      });
       if (pegMovements?.length) {
         store().addPegMovements(pegMovements);
         checkHoleToasts(pegMovements);

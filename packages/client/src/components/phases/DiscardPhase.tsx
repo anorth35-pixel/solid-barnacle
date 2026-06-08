@@ -6,15 +6,19 @@ import type { Card } from '@cribbgolf/shared';
 import styles from './DiscardPhase.module.css';
 
 export default function DiscardPhase() {
-  const { myHand, gameState, mySeat } = useGameStore();
+  const { myHand, gameState, mySeat, setMyHand } = useGameStore();
   const [selected, setSelected] = useState<Card[]>([]);
+  const [discarded, setDiscarded] = useState(false);
 
   const discardCount = gameState?.config.playerCount === 2 ? 2 : 1;
   const isDealer = mySeat === gameState?.dealerSeat;
 
   function handleDiscard() {
-    if (selected.length !== discardCount) return;
-    getSocket().emit('game:discard', { cardIds: selected.map((c) => c.id) });
+    if (selected.length !== discardCount || discarded) return;
+    const ids = new Set(selected.map((c) => c.id));
+    getSocket().emit('game:discard', { cardIds: [...ids] });
+    setMyHand(myHand.filter((c) => !ids.has(c.id)));
+    setDiscarded(true);
   }
 
   return (
@@ -32,10 +36,10 @@ export default function DiscardPhase() {
       />
       <button
         className="btn-primary"
-        disabled={selected.length !== discardCount}
+        disabled={selected.length !== discardCount || discarded}
         onClick={handleDiscard}
       >
-        Discard {selected.length}/{discardCount}
+        {discarded ? 'Waiting…' : `Discard ${selected.length}/${discardCount}`}
       </button>
     </div>
   );

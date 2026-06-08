@@ -153,6 +153,7 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
       seat,
       card: playedCard,
       runningCount: game.state.pegging.runningCount,
+      activePlayerSeat: game.state.activePlayerSeat,
       scoreEvents: result.events,
       pegMovements: result.movements,
       golfScores: game.state.golfScores,
@@ -173,6 +174,7 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     io.to(room.code).emit('game:go-called', {
       seat,
       countReset: result.countReset,
+      activePlayerSeat: game.state.activePlayerSeat,
       scoreEvents: result.events,
       pegMovements: result.movements,
       golfScores: game.state.golfScores,
@@ -421,6 +423,7 @@ function makeAIRunner(io: Server, roomCode: string, game: ServerGame, seat: Play
         seat,
         card: player.playedCards.at(-1)!,
         runningCount: game.state.pegging.runningCount,
+        activePlayerSeat: game.state.activePlayerSeat,
         scoreEvents: result.events,
         pegMovements: result.movements,
         golfScores: game.state.golfScores,
@@ -431,6 +434,7 @@ function makeAIRunner(io: Server, roomCode: string, game: ServerGame, seat: Play
       io.to(roomCode).emit('game:go-called', {
         seat,
         countReset: result.countReset,
+        activePlayerSeat: game.state.activePlayerSeat,
         scoreEvents: result.events,
         pegMovements: result.movements,
         golfScores: game.state.golfScores,
