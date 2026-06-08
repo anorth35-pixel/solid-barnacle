@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { Course, PlayerGolfScore } from '@cribbgolf/shared';
 import { getGolfTermForScore } from '@cribbgolf/shared';
@@ -24,6 +24,8 @@ interface Props {
 }
 
 export default function GolfCourseBoard({ course, golfScores, playerNames }: Props) {
+  const [scorecardOpen, setScorecardOpen] = useState(false);
+
   return (
     <div className={styles.wrapper}>
       <svg
@@ -129,37 +131,50 @@ export default function GolfCourseBoard({ course, golfScores, playerNames }: Pro
 
       {/* Scorecard */}
       <div className={styles.scorecard}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Hole</th>
-              <th>Par</th>
-              {playerNames.map((n, i) => <th key={i}>{n}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {course.holes.map((hole) => (
-              <tr key={hole.number}>
-                <td>{hole.number}</td>
-                <td>{hole.par}</td>
-                {golfScores.map((gs, pi) => {
-                  const hs = gs.holeScores.find((h) => h.holeNumber === hole.number);
-                  return (
-                    <td key={pi} className={hs ? scoreClass(hs.relativeToPar) : ''}>
-                      {hs ? hs.strokes : '-'}
-                    </td>
-                  );
-                })}
-              </tr>
+        <button className={styles.scorecardToggle} onClick={() => setScorecardOpen((o) => !o)}>
+          <span>Scorecard</span>
+          <span className={styles.scorecardTotals}>
+            {golfScores.map((gs, i) => (
+              <span key={i} style={{ color: PLAYER_COLORS[i] }}>
+                {gs.totalRelativeToPar > 0 ? `+${gs.totalRelativeToPar}` : gs.totalRelativeToPar === 0 ? 'E' : gs.totalRelativeToPar}
+              </span>
             ))}
-            <tr className={styles.totalRow}>
-              <td colSpan={2}>Total</td>
-              {golfScores.map((gs, pi) => (
-                <td key={pi}>{gs.totalRelativeToPar >= 0 ? `+${gs.totalRelativeToPar}` : gs.totalRelativeToPar}</td>
+          </span>
+          <span className={styles.scorecardChevron}>{scorecardOpen ? '▲' : '▼'}</span>
+        </button>
+        {scorecardOpen && (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Hole</th>
+                <th>Par</th>
+                {playerNames.map((n, i) => <th key={i}>{n}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {course.holes.map((hole) => (
+                <tr key={hole.number}>
+                  <td>{hole.number}</td>
+                  <td>{hole.par}</td>
+                  {golfScores.map((gs, pi) => {
+                    const hs = gs.holeScores.find((h) => h.holeNumber === hole.number);
+                    return (
+                      <td key={pi} className={hs ? scoreClass(hs.relativeToPar) : ''}>
+                        {hs ? hs.strokes : '-'}
+                      </td>
+                    );
+                  })}
+                </tr>
               ))}
-            </tr>
-          </tbody>
-        </table>
+              <tr className={styles.totalRow}>
+                <td colSpan={2}>Total</td>
+                {golfScores.map((gs, pi) => (
+                  <td key={pi}>{gs.totalRelativeToPar >= 0 ? `+${gs.totalRelativeToPar}` : gs.totalRelativeToPar}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
