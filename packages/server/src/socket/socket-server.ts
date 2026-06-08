@@ -95,6 +95,22 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
 
   // ── Game actions ──────────────────────────────────────────────────────────
 
+  socket.on('game:choose-path', ({ holeNumber, pathId }: { holeNumber: number; pathId: string }) => {
+    const room = getRoomBySocket(socket.id);
+    if (!room) return;
+    const game = activeGames.get(room.code);
+    if (!game) return;
+    const ok = game.choosePath(socket.id, holeNumber, pathId);
+    if (!ok) return;
+    // Broadcast updated golf scores so all clients reflect the choice
+    io.to(room.code).emit('game:path-chosen', {
+      playerId: socket.id,
+      holeNumber,
+      pathId,
+      golfScores: game.state.golfScores,
+    });
+  });
+
   socket.on('game:discard', ({ cardIds }: { cardIds: string[] }) => {
     const room = getRoomBySocket(socket.id);
     if (!room) return;

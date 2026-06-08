@@ -1,26 +1,32 @@
 import type { GolfHole, PegMovement, PegholeType } from '../types/board.js';
 import type { PlayerGolfScore, HoleScore } from '../types/golf-score.js';
 import { applyHazard, isHazard } from './hazards.js';
+import { getPlayerPath } from './course.js';
 
 export function advancePeg(
   golfScore: PlayerGolfScore,
   points: number,
   holes: GolfHole[],
 ): { updated: PlayerGolfScore; movement: PegMovement } {
+  const startPath = getPlayerPath(holes[golfScore.currentHole - 1], golfScore.selectedPaths);
+
   const movement: PegMovement = {
     playerId: golfScore.playerId,
     fromHole: golfScore.currentHole,
     fromPegholeIndex: golfScore.currentPegholeIndex,
+    fromPathId: startPath.id,
     toHole: golfScore.currentHole,
     toPegholeIndex: golfScore.currentPegholeIndex,
+    toPathId: startPath.id,
     pointsUsed: points,
     hazardsHit: [],
     holesCompleted: [],
   };
 
-  let score = {
+  let score: PlayerGolfScore = {
     ...golfScore,
     holeScores: [...golfScore.holeScores],
+    selectedPaths: { ...golfScore.selectedPaths },
   };
   let remaining = points;
 
@@ -28,30 +34,30 @@ export function advancePeg(
     const hole = holes[score.currentHole - 1];
     if (!hole) break;
 
+    const path = getPlayerPath(hole, score.selectedPaths);
     const nextIndex = score.currentPegholeIndex + 1;
-    if (nextIndex >= hole.pegholes.length) break;  // already at cup
+    if (nextIndex >= path.pegholes.length) break; // already at cup
 
-    const nextPeghole = hole.pegholes[nextIndex];
+    const nextPeghole = path.pegholes[nextIndex];
 
-    // Spend 1 cribbage point to move to this peghole
     remaining--;
     score = { ...score, currentHoleStrokes: score.currentHoleStrokes + 1 };
 
     if (isHazard(nextPeghole)) {
       const result = applyHazard(nextPeghole, nextIndex);
       movement.hazardsHit.push({ peghole: nextPeghole, result });
-      // Penalty strokes counted against the hole (don't cost cribbage points, just add to score)
       score = {
         ...score,
         currentHoleStrokes: score.currentHoleStrokes + result.penaltyStrokes,
         currentPegholeIndex: result.retreatToIndex ?? nextIndex,
+        currentPathId: path.id,
       };
     } else {
-      score = { ...score, currentPegholeIndex: nextIndex };
+      score = { ...score, currentPegholeIndex: nextIndex, currentPathId: path.id };
     }
 
-    // Hole complete: landed at or past the cup (last peghole in the sequence)
-    if (score.currentPegholeIndex >= hole.pegholes.length - 1) {
+    // Hole complete when peg reaches the cup (last peghole)
+    if (score.currentPegholeIndex >= path.pegholes.length - 1) {
       const hazardTypes = movement.hazardsHit
         .filter((h) => h.peghole.holeNumber === hole.number)
         .map((h) => h.peghole.type as PegholeType);
@@ -69,6 +75,10 @@ export function advancePeg(
       };
 
       movement.holesCompleted.push(hole.number);
+
+      const nextHole = score.currentHole + 1;
+      const finished = score.holesCompleted + 1 >= 18;
+
       score = {
         ...score,
         holeScores: [...score.holeScores, holeScore],
@@ -77,18 +87,23 @@ export function advancePeg(
         holesCompleted: score.holesCompleted + 1,
         currentHoleStrokes: 0,
         currentPegholeIndex: 0,
+        currentPathId: 'A',
+        // Pre-seed next hole with path A so advancement works immediately;
+        // human players may override via game:choose-path before their next scoring event
+        selectedPaths: finished
+          ? score.selectedPaths
+          : { ...score.selectedPaths, [nextHole]: score.selectedPaths[nextHole] ?? 'A' },
+        // Signal to the server that this player should be prompted for a path choice
+        pendingPathChoiceHole: finished ? null : nextHole,
+        isFinished: finished,
+        currentHole: finished ? 18 : nextHole,
       };
-
-      if (score.holesCompleted >= 18) {
-        score = { ...score, isFinished: true, currentHole: 18 };
-      } else {
-        score = { ...score, currentHole: score.currentHole + 1 };
-      }
     }
   }
 
   movement.toHole = score.currentHole;
   movement.toPegholeIndex = score.currentPegholeIndex;
+  movement.toPathId = score.currentPathId;
 
   return { updated: score, movement };
 }

@@ -151,6 +151,10 @@ export function useGameSocket() {
       store().setDisconnectedSeats(store().disconnectedSeats.filter((s) => s !== seat));
     });
 
+    socket.on('game:path-chosen', ({ golfScores }: any) => {
+      store().patchGameState({ golfScores });
+    });
+
     socket.on('game:over', ({ winnerSeat, finalGolfScores }: any) => {
       store().patchGameState({
         winner: winnerSeat,
@@ -219,6 +223,7 @@ export function useGameSocket() {
       socket.off('game:muggins-claimed');
       socket.off('player:disconnected');
       socket.off('player:reconnected');
+      socket.off('game:path-chosen');
       socket.off('game:over');
       socket.off('game:error');
     };

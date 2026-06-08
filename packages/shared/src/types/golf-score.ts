@@ -14,11 +14,14 @@ export interface PlayerGolfScore {
   holeScores: HoleScore[];
   currentHole: number;
   currentPegholeIndex: number;
-  currentHoleStrokes: number;    // strokes accumulated on the hole currently being played
+  currentPathId: string;                 // path currently being traversed ('A'|'B'|'C')
+  currentHoleStrokes: number;
   totalStrokes: number;
   totalRelativeToPar: number;
   holesCompleted: number;
   isFinished: boolean;
+  selectedPaths: Record<number, string>; // holeNumber → pathId
+  pendingPathChoiceHole: number | null;  // hole number needing a path selection
 }
 
 export function getGolfTermForScore(relativeToPar: number): string {
@@ -38,11 +41,14 @@ export function createInitialGolfScore(playerId: string): PlayerGolfScore {
     holeScores: [],
     currentHole: 1,
     currentPegholeIndex: 0,
+    currentPathId: 'A',
     currentHoleStrokes: 0,
     totalStrokes: 0,
     totalRelativeToPar: 0,
     holesCompleted: 0,
     isFinished: false,
+    selectedPaths: { 1: 'A' },
+    pendingPathChoiceHole: null,
   };
 }
 

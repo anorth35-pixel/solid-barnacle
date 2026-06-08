@@ -213,8 +213,9 @@ describe('advancePeg', () => {
   it('completes a hole and advances to the next', () => {
     const gs = createInitialGolfScore('p1');
     const hole = DEFAULT_COURSE.holes[0];
-    // totalPegholes - 1 advances to reach the cup (player starts at tee index 0 for free)
-    const { updated } = advancePeg(gs, hole.totalPegholes - 1, DEFAULT_COURSE.holes);
+    const pathA = hole.paths[0];
+    // pathA.pegholes.length - 1 steps to reach the cup from tee
+    const { updated } = advancePeg(gs, pathA.pegholes.length - 1, DEFAULT_COURSE.holes);
     expect(updated.holesCompleted).toBe(1);
     expect(updated.currentHole).toBe(2);
     expect(updated.currentPegholeIndex).toBe(0);
@@ -240,9 +241,10 @@ describe('advancePeg', () => {
 
   it('marks game finished after completing hole 18', () => {
     const gs = createInitialGolfScore('p1');
-    const farGs = { ...gs, currentHole: 18, holesCompleted: 17, holeScores: [] };
+    const farGs = { ...gs, currentHole: 18, holesCompleted: 17, holeScores: [], selectedPaths: { 18: 'A' } };
     const hole18 = DEFAULT_COURSE.holes[17];
-    const { updated } = advancePeg(farGs, hole18.totalPegholes, DEFAULT_COURSE.holes);
+    const pathA = hole18.paths[0];
+    const { updated } = advancePeg(farGs, pathA.pegholes.length, DEFAULT_COURSE.holes);
     expect(updated.isFinished).toBe(true);
     expect(updated.holesCompleted).toBe(18);
   });

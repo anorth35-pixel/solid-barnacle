@@ -11,19 +11,26 @@ export type PegholeType =
 
 export interface Peghole {
   id: string;
-  holeNumber: number;   // 1–18
-  index: number;        // position within hole (0 = tee)
+  holeNumber: number;
+  pathId: string;       // 'A' | 'B' | 'C'
+  index: number;        // position within path (0 = tee)
   type: PegholeType;
-  isPar: boolean;       // counts toward standard par route
-  x: number;           // SVG coordinate
+  isPar: boolean;
+  x: number;
   y: number;
+}
+
+export interface GolfPath {
+  id: string;           // 'A' | 'B' | 'C'
+  label: string;        // 'Safe' | 'Moderate' | 'Risky'
+  description: string;
+  pegholes: Peghole[];  // ordered tee → cup
 }
 
 export interface GolfHole {
   number: number;       // 1–18
-  par: number;          // 3, 4, or 5
-  pegholes: Peghole[];  // ordered tee → cup
-  totalPegholes: number;
+  par: number;          // 3 | 4 | 5
+  paths: GolfPath[];    // exactly 3 paths (A, B, C)
   handicap: number;     // 1–18 difficulty rank
 }
 
@@ -45,8 +52,10 @@ export interface PegMovement {
   playerId: string;
   fromHole: number;
   fromPegholeIndex: number;
+  fromPathId: string;
   toHole: number;
   toPegholeIndex: number;
+  toPathId: string;
   pointsUsed: number;
   hazardsHit: Array<{ peghole: Peghole; result: HazardResult }>;
   holesCompleted: number[];

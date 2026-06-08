@@ -13,6 +13,7 @@ export interface GameStore {
   socketId: string;
   mySeat: PlayerSeat | null;
   myHand: Card[];
+  pendingPathChoice: { holeNumber: number } | null;
 
   room: RoomSummary | null;
   roomCode: string | null;
@@ -29,6 +30,7 @@ export interface GameStore {
   setSocketId: (id: string) => void;
   setMySeat: (seat: PlayerSeat) => void;
   setMyHand: (hand: Card[]) => void;
+  setPendingPathChoice: (choice: { holeNumber: number } | null) => void;
   setRoom: (room: RoomSummary, code?: string) => void;
   setGameState: (state: GameState) => void;
   patchGameState: (patch: Partial<GameState>) => void;
@@ -47,6 +49,7 @@ const initialState = {
   socketId: '',
   mySeat: null,
   myHand: [],
+  pendingPathChoice: null,
   room: null,
   roomCode: null,
   gameState: null,
@@ -64,13 +67,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setSocketId: (id) => set({ socketId: id }),
   setMySeat: (seat) => set({ mySeat: seat }),
   setMyHand: (hand) => set({ myHand: hand }),
+  setPendingPathChoice: (choice) => set({ pendingPathChoice: choice }),
   setRoom: (room, code) => set({ room, roomCode: code ?? room.code }),
-  setGameState: (state) => set({ gameState: state, lastBreakdowns: [] }),
+  setGameState: (state) => {
+    set({ gameState: state, lastBreakdowns: [] });
+    const mySeat = get().mySeat;
+    if (mySeat !== null && (state as any).golfScores?.[mySeat]) {
+      const myGs = (state as any).golfScores[mySeat];
+      if (myGs.pendingPathChoiceHole != null) {
+        set({ pendingPathChoice: { holeNumber: myGs.pendingPathChoiceHole } });
+      }
+    }
+  },
 
   patchGameState: (patch) => {
     const current = get().gameState;
     if (!current) return;
-    set({ gameState: { ...current, ...patch } });
+    const next = { ...current, ...patch };
+    set({ gameState: next });
+    // Auto-set pendingPathChoice if the server flagged one for this player
+    const mySeat = get().mySeat;
+    if (mySeat !== null && next.golfScores?.[mySeat]) {
+      const myGs = next.golfScores[mySeat] as any;
+      if (myGs.pendingPathChoiceHole !== null && myGs.pendingPathChoiceHole !== undefined) {
+        if (get().pendingPathChoice?.holeNumber !== myGs.pendingPathChoiceHole) {
+          set({ pendingPathChoice: { holeNumber: myGs.pendingPathChoiceHole } });
+        }
+      }
+    }
   },
 
   addBreakdown: (bd) => set((s) => ({

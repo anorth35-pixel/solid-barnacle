@@ -1,83 +1,190 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
 }
 
-.svg {
-  width: 100%;
-  height: auto;
-  max-height: 320px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+/* ── Pane ─────────────────────────────────────────────────────────────── */
+.pane {
+  background: rgba(255,255,255,0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.myPane {
+  border-color: rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.07);
 }
 
-.scorecard {
+.paneHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 4px;
+  font-size: 0.8rem;
+}
+.playerDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.playerName {
+  font-weight: 700;
+  color: #fff;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.holeTag {
+  color: rgba(255,255,255,0.5);
+  font-size: 0.75rem;
+}
+.scoreTag {
+  font-weight: 700;
+  font-size: 0.82rem;
+  min-width: 28px;
+  text-align: right;
+}
+.choosePathBtn {
+  background: rgba(255,193,7,0.2);
+  border: 1px solid rgba(255,193,7,0.5);
+  color: #ffc107;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.choosePathBtn:hover { background: rgba(255,193,7,0.35); }
+
+/* ── Track ────────────────────────────────────────────────────────────── */
+.trackWrapper {
   overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+  padding: 0 8px 8px;
+}
+.trackWrapper::-webkit-scrollbar { height: 4px; }
+.trackWrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+.track {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  position: relative;
 }
 
+.cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  flex-shrink: 0;
+  padding-top: 18px; /* room for hole label */
+}
+
+.holeLabel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.45);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.branchDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffc107;
+  display: inline-block;
+}
+
+.connector {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 50%;
+  height: 2px;
+  background: rgba(255,255,255,0.18);
+  transform: translateY(-1px);
+  margin-top: 9px; /* align with circle center */
+}
+.connPast { background: rgba(255,255,255,0.45); }
+.connGap { background: rgba(255,255,255,0.07); }
+
+/* Also draw right half of connector on right side of circle */
+.cell::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 50%;
+  height: 2px;
+  background: rgba(255,255,255,0.18);
+  transform: translateY(-1px);
+  margin-top: 9px;
+  pointer-events: none;
+}
+
+.peghole {
+  position: relative;
+  border-radius: 50%;
+  transition: width 0.2s, height 0.2s, box-shadow 0.2s;
+  z-index: 1;
+}
+.pegholePast {
+  opacity: 0.4;
+}
+.pegholeCurrent {
+  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+}
+
+/* ── Scorecard ────────────────────────────────────────────────────────── */
+.scorecard { overflow-x: auto; }
 .scorecardToggle {
   width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.06);
   border: none;
   border-radius: 6px;
-  padding: 8px 12px;
-  color: white;
-  font-size: 0.85rem;
+  padding: 7px 12px;
+  color: #fff;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  text-align: left;
-  margin-bottom: 4px;
 }
-
-.scorecardToggle:hover { background: rgba(255,255,255,0.13); }
-
-.scorecardTotals {
-  display: flex;
-  gap: 10px;
-  margin-left: auto;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.scorecardChevron {
-  font-size: 0.7rem;
-  opacity: 0.7;
-}
-
+.scorecardToggle:hover { background: rgba(255,255,255,0.11); }
+.scorecardTotals { display: flex; gap: 10px; margin-left: auto; font-weight: 700; }
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8rem;
-  background: rgba(255,255,255,0.05);
-  border-radius: 8px;
+  font-size: 0.78rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
   overflow: hidden;
+  margin-top: 4px;
 }
-
 .table th, .table td {
-  padding: 5px 8px;
+  padding: 4px 7px;
   text-align: center;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-
-.table th {
-  background: rgba(0,0,0,0.3);
-  font-weight: 700;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-}
-
-.totalRow td {
-  font-weight: 700;
-  background: rgba(0,0,0,0.2);
-}
-
-.eagle { background: #ffd54f22; color: #ffd54f; font-weight: 700; }
-.birdie { background: #c8e6c922; color: #81c784; font-weight: 600; }
-.par { color: inherit; }
-.bogey { background: #ffccbc22; color: #ff8a65; }
-.doubleBogey { background: #ffcdd222; color: #ef9a9a; }
+.table th { background: rgba(0,0,0,0.3); font-weight: 700; font-size: 0.72rem; text-transform: uppercase; }
+.totalRow td { font-weight: 700; background: rgba(0,0,0,0.2); }
+.eagle   { color: #ffd54f; font-weight: 700; }
+.birdie  { color: #81c784; font-weight: 600; }
+.par     { }
+.bogey   { color: #ff8a65; }
+.doubleBogey { color: #ef9a9a; }

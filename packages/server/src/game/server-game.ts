@@ -325,6 +325,40 @@ export class ServerGame {
     );
     this.state.golfScores[gsIndex] = updated;
     this.state.pendingPegMovements.push(movement);
+    // AI players auto-choose their next path immediately
+    this.autoChoosePathsForAI();
+  }
+
+  choosePath(playerId: string, holeNumber: number, pathId: string): boolean {
+    const gsIndex = this.state.golfScores.findIndex((g) => g.playerId === playerId);
+    if (gsIndex === -1) return false;
+    const gs = this.state.golfScores[gsIndex];
+    if (gs.pendingPathChoiceHole !== holeNumber) return false;
+    this.state.golfScores[gsIndex] = {
+      ...gs,
+      selectedPaths: { ...gs.selectedPaths, [holeNumber]: pathId },
+      currentPathId: holeNumber === gs.currentHole ? pathId : gs.currentPathId,
+      pendingPathChoiceHole: null,
+    };
+    return true;
+  }
+
+  private autoChoosePathsForAI(): void {
+    for (const player of this.state.players) {
+      if (player.type !== 'ai') continue;
+      const gsIndex = this.state.golfScores.findIndex((g) => g.playerId === player.id);
+      if (gsIndex === -1) continue;
+      const gs = this.state.golfScores[gsIndex];
+      if (gs.pendingPathChoiceHole === null) continue;
+      // AI picks based on difficulty: easy/medium=A, hard=B for variety
+      const pathId = this.state.config.aiDifficulty === 'hard' ? 'B' : 'A';
+      this.state.golfScores[gsIndex] = {
+        ...gs,
+        selectedPaths: { ...gs.selectedPaths, [gs.pendingPathChoiceHole]: pathId },
+        currentPathId: gs.pendingPathChoiceHole === gs.currentHole ? pathId : gs.currentPathId,
+        pendingPathChoiceHole: null,
+      };
+    }
   }
 
   openMugginsWindow(scoringPlayerId: string, missedItems: ScoreItem[]): MugginsState {

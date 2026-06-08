@@ -1,6 +1,7 @@
 import { useGameStore } from '../../store/game-store.js';
 import { getSocket } from '../../socket/socket-client.js';
 import GolfCourseBoard from '../board/GolfCourseBoard.js';
+import PathChoiceDialog from '../board/PathChoiceDialog.js';
 import DiscardPhase from '../phases/DiscardPhase.js';
 import PeggingPhase from '../phases/PeggingPhase.js';
 import ScoringPhase from '../phases/ScoringPhase.js';
@@ -12,7 +13,7 @@ import DisconnectedBanner from '../ui/DisconnectedBanner.js';
 import styles from './GamePage.module.css';
 
 export default function GamePage() {
-  const { gameState, mySeat, mugginsWindow, lastBreakdowns } = useGameStore();
+  const { gameState, mySeat, mugginsWindow, lastBreakdowns, pendingPathChoice, setPendingPathChoice } = useGameStore();
 
   if (!gameState) {
     return <div className={styles.loading}>Connecting to game…</div>;
@@ -27,7 +28,13 @@ export default function GamePage() {
       <DisconnectedBanner />
 
       <div className={styles.boardSection}>
-        <GolfCourseBoard course={course} golfScores={golfScores} playerNames={playerNames} />
+        <GolfCourseBoard
+          course={course}
+          golfScores={golfScores}
+          playerNames={playerNames}
+          mySeat={mySeat}
+          onChoosePath={(holeNumber) => setPendingPathChoice({ holeNumber })}
+        />
       </div>
 
       <div className={styles.phaseSection}>
@@ -77,6 +84,12 @@ export default function GamePage() {
 
       {mugginsWindow && <MugginsOverlay />}
       {phase === 'game-over' && <GameOverModal />}
+      {pendingPathChoice && (
+        <PathChoiceDialog
+          holeNumber={pendingPathChoice.holeNumber}
+          hole={course.holes[pendingPathChoice.holeNumber - 1]}
+        />
+      )}
       <ToastStack />
     </div>
   );
