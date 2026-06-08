@@ -3,8 +3,10 @@
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w packages/server\" \"npm run dev -w packages/client\"",
+    "dev": "npm run build -w packages/shared && concurrently \"npm run dev -w packages/server\" \"npm run dev -w packages/client\"",
     "build": "npm run build -w packages/shared && npm run build -w packages/server && npm run build -w packages/client",
+    "build:prod": "npm run build -w packages/shared && npm run build -w packages/server && npm run build -w packages/client",
+    "start": "NODE_ENV=production node packages/server/dist/index.js",
     "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
