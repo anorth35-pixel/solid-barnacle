@@ -345,18 +345,28 @@ export class ServerGame {
   }
 
   private autoChoosePathsForAI(): void {
+    const PENALTY_WEIGHT: Record<string, number> = {
+      rough: 1, trees: 1, sand: 1, water: 2, 'out-of-bounds': 4,
+    };
     for (const player of this.state.players) {
       if (player.type !== 'ai') continue;
       const gsIndex = this.state.golfScores.findIndex((g) => g.playerId === player.id);
       if (gsIndex === -1) continue;
       const gs = this.state.golfScores[gsIndex];
       if (gs.pendingPathChoiceHole === null) continue;
-      // AI picks based on difficulty: easy/medium=A, hard=B for variety
-      const pathId = this.state.config.aiDifficulty === 'hard' ? 'B' : 'A';
+      const hole = this.state.course.holes[gs.pendingPathChoiceHole - 1];
+      let bestId = hole.paths[0].id;
+      let bestCost = Infinity;
+      for (const path of hole.paths) {
+        const cost = path.pegholes.reduce(
+          (sum, ph) => sum + (PENALTY_WEIGHT[ph.type] ?? 0), 0,
+        );
+        if (cost < bestCost) { bestCost = cost; bestId = path.id; }
+      }
       this.state.golfScores[gsIndex] = {
         ...gs,
-        selectedPaths: { ...gs.selectedPaths, [gs.pendingPathChoiceHole]: pathId },
-        currentPathId: gs.pendingPathChoiceHole === gs.currentHole ? pathId : gs.currentPathId,
+        selectedPaths: { ...gs.selectedPaths, [gs.pendingPathChoiceHole]: bestId },
+        currentPathId: gs.pendingPathChoiceHole === gs.currentHole ? bestId : gs.currentPathId,
         pendingPathChoiceHole: null,
       };
     }
