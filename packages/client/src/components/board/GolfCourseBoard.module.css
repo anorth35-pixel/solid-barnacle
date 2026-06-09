@@ -1,27 +1,27 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
 }
 
 /* ── Pane ─────────────────────────────────────────────────────────────── */
 .pane {
-  background: rgba(0,0,0,0.25);
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.28);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
   overflow: hidden;
 }
 .myPane {
   border-color: rgba(255,255,255,0.18);
-  background: rgba(0,0,0,0.3);
+  background: rgba(0,0,0,0.32);
 }
 
 .paneHeader {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 10px 5px;
+  padding: 6px 10px 5px;
   font-size: 0.8rem;
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
@@ -41,7 +41,7 @@
 }
 .holeTag {
   color: rgba(255,255,255,0.45);
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   white-space: nowrap;
 }
 .scoreTag {
@@ -62,69 +62,37 @@
 }
 .choosePathBtn:hover { background: rgba(255,193,7,0.32); }
 
-/* ── Hole view ────────────────────────────────────────────────────────── */
-.holeView {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  overflow: hidden;
-}
-
-.holeViewLarge {
-  max-height: 340px;
-  padding: 6px 12px 4px;
-}
-.holeViewLarge svg {
-  max-height: 340px;
-  width: 100%;
-}
-
-.holeViewSmall {
-  max-height: 160px;
-  padding: 4px 20px 3px;
-}
-.holeViewSmall svg {
-  max-height: 160px;
-  width: 100%;
-}
-
-.finishedBadge {
-  text-align: center;
-  padding: 20px;
-  font-size: 1.3rem;
-  color: #a5d6a7;
-  font-weight: 700;
-}
-
-/* ── Progress strip ───────────────────────────────────────────────────── */
-.progressStrip {
-  display: flex;
-  gap: 3px;
-  padding: 5px 8px 7px;
+/* ── Scrollable track ─────────────────────────────────────────────────── */
+.trackWrapper {
   overflow-x: auto;
-  scrollbar-width: none;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.18) transparent;
 }
-.progressStrip::-webkit-scrollbar { display: none; }
+.trackWrapper::-webkit-scrollbar { height: 4px; }
+.trackWrapper::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.18);
+  border-radius: 2px;
+}
 
-.miniChip {
+/* Large track for the current player */
+.trackLarge { height: 120px; }
+
+/* Compact track for opponents */
+.trackSmall { height: 68px; }
+.trackSmall svg {
+  height: 68px !important;
+  width: auto !important;
+}
+
+.track {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  border-radius: 5px;
-  padding: 3px 4px 2px;
-  min-width: 22px;
-  flex-shrink: 0;
-  gap: 1px;
-}
-.miniNum {
-  font-size: 0.6rem;
-  font-weight: 700;
-  line-height: 1;
-}
-.miniScore {
-  font-size: 0.52rem;
-  line-height: 1;
-  white-space: nowrap;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 3px;
+  padding: 0 4px;
+  height: 100%;
 }
 
 /* ── Scorecard ────────────────────────────────────────────────────────── */

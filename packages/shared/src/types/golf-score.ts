@@ -48,7 +48,7 @@ export function createInitialGolfScore(playerId: string): PlayerGolfScore {
     holesCompleted: 0,
     isFinished: false,
     selectedPaths: { 1: 'A' },
-    pendingPathChoiceHole: null,
+    pendingPathChoiceHole: 1,  // show path dialog for hole 1 just like subsequent holes
   };
 }
 

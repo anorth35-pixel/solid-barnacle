@@ -52,6 +52,7 @@ export class ServerGame {
 
   startGame(): void {
     this.state.phase = 'dealing';
+    this.autoChoosePathsForAI(); // immediately resolve hole-1 path for AI players
     this.dealRound();
   }
 
