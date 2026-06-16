@@ -84,15 +84,45 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
       state: sanitizeState(game.state),
     });
 
-    // Send each human their private hand
-    for (const player of game.state.players.filter((p) => p.type === 'human')) {
-      io.to(player.id).emit('game:dealt', {
-        yourHand: player.hand,
-        dealerSeat: game.state.dealerSeat,
+    if (room.config.mode !== 'board-only') {
+      // Send each human their private hand
+      for (const player of game.state.players.filter((p) => p.type === 'human')) {
+        io.to(player.id).emit('game:dealt', {
+          yourHand: player.hand,
+          dealerSeat: game.state.dealerSeat,
+        });
+      }
+      triggerAIActions(io, room.code, game);
+    }
+  });
+
+  // ── Board-only: manual point entry ───────────────────────────────────────
+  socket.on('game:manual-points', ({ playerId, points }: { playerId: string; points: number }) => {
+    const room = getRoomBySocket(socket.id);
+    if (!room) return;
+    const game = activeGames.get(room.code);
+    if (!game || game.state.phase !== 'board-play') return;
+    if (typeof points !== 'number' || points < 1 || points > 29) return;
+
+    const movements = game.awardManualPoints(playerId, points);
+
+    if ((game.state.phase as string) === 'game-over') {
+      io.to(room.code).emit('game:over', {
+        winnerSeat: game.state.winner,
+        finalGolfScores: game.state.golfScores,
+        stakesState: game.state.stakesState,
+        finishingBonusAwardedTo: game.state.finishingBonusAwardedTo,
       });
+      return;
     }
 
-    triggerAIActions(io, room.code, game);
+    io.to(room.code).emit('game:points-awarded', {
+      playerId,
+      points,
+      pegMovements: movements,
+      golfScores: game.state.golfScores,
+      dealerSeat: game.state.dealerSeat,
+    });
   });
 
   // ── Game actions ──────────────────────────────────────────────────────────

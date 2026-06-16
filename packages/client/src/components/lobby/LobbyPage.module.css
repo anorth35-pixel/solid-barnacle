@@ -82,6 +82,13 @@
   font-size: 0.9rem;
 }
 
+.boardDesc {
+  font-size: 0.82rem;
+  color: var(--gray-dark);
+  margin: -4px 0 4px;
+  line-height: 1.5;
+}
+
 .stakesLabel {
   font-size: 0.85rem;
   font-weight: 600;

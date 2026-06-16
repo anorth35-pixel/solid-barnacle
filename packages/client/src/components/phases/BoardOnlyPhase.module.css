@@ -1,0 +1,132 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+}
+
+.heading {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.45);
+  margin: 0;
+}
+
+/* Player buttons */
+.playerRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.playerBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 90px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 2px solid var(--player-color, #555);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.playerBtn:hover { background: rgba(255,255,255,0.08); }
+.playerBtnActive {
+  background: color-mix(in srgb, var(--player-color, #555) 25%, transparent) !important;
+}
+
+.playerName {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--player-color, #fff);
+}
+
+.dealerBadge {
+  background: #ffd54f;
+  color: #111;
+  font-size: 0.6rem;
+  font-weight: 800;
+  border-radius: 3px;
+  padding: 1px 4px;
+  letter-spacing: 0.04em;
+}
+
+.playerHole {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.45);
+}
+
+/* Quick-tap grid */
+.quickGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.quickBtn {
+  padding: 10px 4px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.quickBtn:hover { background: rgba(255,255,255,0.18); }
+.quickBtn:active { background: rgba(255,255,255,0.28); transform: scale(0.96); }
+
+/* Custom input */
+.customRow {
+  display: flex;
+  gap: 8px;
+}
+
+.customInput {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+  font-size: 1rem;
+}
+.customInput::placeholder { color: rgba(255,255,255,0.3); }
+
+.awardBtn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #2e7d32;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: background 0.12s;
+}
+.awardBtn:hover:not(:disabled) { background: #388e3c; }
+.awardBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Hints */
+.hint {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.35);
+  text-align: center;
+  margin: 4px 0;
+}
+
+.lastAwarded {
+  font-size: 0.76rem;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  margin: 0;
+}

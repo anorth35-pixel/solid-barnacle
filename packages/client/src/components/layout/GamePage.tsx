@@ -8,6 +8,7 @@ import ScoringPhase from '../phases/ScoringPhase.js';
 import StarterCard from '../cards/StarterCard.js';
 import MugginsOverlay from '../scoring/MugginsOverlay.js';
 import ScoreDeclarationModal from '../scoring/ScoreDeclarationModal.js';
+import BoardOnlyPhase from '../phases/BoardOnlyPhase.js';
 import GameOverModal from '../scoring/GameOverModal.js';
 import ToastStack from '../ui/ToastStack.js';
 import DisconnectedBanner from '../ui/DisconnectedBanner.js';
@@ -49,6 +50,7 @@ export default function GamePage() {
           </div>
         )}
 
+        {phase === 'board-play' && <BoardOnlyPhase />}
         {phase === 'dealing' && (
           <div className={styles.dealing}>⛳ Dealing cards…</div>
         )}

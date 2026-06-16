@@ -161,6 +161,15 @@ export function useGameSocket() {
       store().patchGameState({ golfScores });
     });
 
+    socket.on('game:points-awarded', ({ playerId, points, pegMovements, golfScores, dealerSeat }: any) => {
+      store().patchGameState({ golfScores, ...(dealerSeat !== undefined ? { dealerSeat } : {}) });
+      if (pegMovements?.length) {
+        store().addPegMovements(pegMovements);
+        checkHazardToasts(pegMovements);
+        checkHoleToasts(pegMovements);
+      }
+    });
+
     socket.on('game:over', ({ winnerSeat, finalGolfScores, stakesState, finishingBonusAwardedTo }: any) => {
       store().patchGameState({
         winner: winnerSeat,
@@ -273,6 +282,7 @@ export function useGameSocket() {
       socket.off('player:disconnected');
       socket.off('player:reconnected');
       socket.off('game:path-chosen');
+      socket.off('game:points-awarded');
       socket.off('game:over');
       socket.off('game:error');
     };

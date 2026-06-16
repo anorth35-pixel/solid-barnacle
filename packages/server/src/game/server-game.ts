@@ -55,9 +55,38 @@ export class ServerGame {
   }
 
   startGame(): void {
+    if (this.state.config.mode === 'board-only') {
+      this.state.phase = 'board-play';
+      // All players need to choose their first path
+      for (const gs of this.state.golfScores) {
+        gs.pendingPathChoiceHole = 1;
+        gs.selectedPaths = { 1: 'A' };
+      }
+      return;
+    }
     this.state.phase = 'dealing';
     this.autoChoosePathsForAI(); // immediately resolve hole-1 path for AI players
     this.dealRound();
+  }
+
+  /** Award points manually (board-only mode). Returns the resulting peg movement. */
+  awardManualPoints(playerId: string, points: number): PegMovement[] {
+    const seatIdx = this.state.players.findIndex((p) => p.id === playerId);
+    if (seatIdx === -1 || points <= 0) return [];
+    const seat = seatIdx as PlayerSeat;
+    const bd: ScoreBreakdown = {
+      playerId,
+      phase: 'hand',
+      items: [{ reason: 'fifteen', cards: [], points, description: `Manual: ${points} pts` }],
+      total: points,
+    };
+    this.awardPointsFromBreakdown(seat, bd);
+    const movements = this.state.pendingPegMovements.splice(0);
+    // Rotate dealer every time the "last" player (highest seat) scores, as a rough crib tracker
+    if (seat === this.state.config.playerCount - 1) {
+      this.state.dealerSeat = this.poneOf(this.state.dealerSeat);
+    }
+    return movements;
   }
 
   private dealRound(): void {

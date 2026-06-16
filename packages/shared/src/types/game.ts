@@ -14,9 +14,10 @@ export type GamePhase =
   | 'hand-scoring'
   | 'crib-scoring'
   | 'round-end'
+  | 'board-play'
   | 'game-over';
 
-export type GameMode = 'local-2p' | 'vs-ai' | 'remote';
+export type GameMode = 'local-2p' | 'vs-ai' | 'remote' | 'board-only';
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface GameConfig {

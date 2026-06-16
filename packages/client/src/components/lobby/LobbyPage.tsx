@@ -13,7 +13,7 @@ const ALL_STAKES: { id: StakeType; label: string; desc: string }[] = [
   { id: 'greenies',label: 'Greenies',desc: 'First to reach the green on par 3s' },
 ];
 
-type Tab = 'create' | 'join' | 'ai';
+type Tab = 'create' | 'join' | 'ai' | 'board';
 
 export default function LobbyPage() {
   const [tab, setTab] = useState<Tab>('ai');
@@ -25,6 +25,8 @@ export default function LobbyPage() {
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [aiCount, setAICount] = useState<1 | 2>(1);
   const [enabledStakes, setEnabledStakes] = useState<StakeType[]>([]);
+  const [boardPlayerCount, setBoardPlayerCount] = useState<2 | 3>(2);
+  const [boardPlayerNames, setBoardPlayerNames] = useState(['', '']);
   const [stakeValue, setStakeValue] = useState<number>(1);
 
   function toggleStake(id: StakeType) {
@@ -59,6 +61,24 @@ export default function LobbyPage() {
     getSocket().emit('room:join', { roomCode: code.toUpperCase(), playerName: name.trim() });
   }
 
+  function handleBoardOnly() {
+    if (!name.trim() || boardPlayerNames.some(n => !n.trim())) return;
+    const allNames = [name.trim(), ...boardPlayerNames.slice(0, boardPlayerCount - 1).map(n => n.trim())];
+    const config: Partial<GameConfig> = {
+      playerCount: boardPlayerCount,
+      mugginsEnabled: false,
+      manualScoring: false,
+      mode: 'board-only',
+      stakesConfig: stakesConfig(),
+    };
+    getSocket().emit('room:create', { playerName: allNames[0], config });
+    getSocket().once('room:created', ({ roomCode: rc, room: r }: any) => {
+      setRoom(r, rc);
+      setMySeat(0);
+      getSocket().emit('game:start', {});
+    });
+  }
+
   function handleVsAI() {
     if (!name.trim()) return;
     const totalPlayers = (1 + aiCount) as 2 | 3;
@@ -81,6 +101,7 @@ export default function LobbyPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'ai', label: '🤖 vs AI' },
+    { id: 'board', label: '📋 Board Only' },
     { id: 'create', label: '🏠 Create Room' },
     { id: 'join', label: '🚪 Join Room' },
   ];
@@ -232,6 +253,69 @@ export default function LobbyPage() {
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleCreate}
                 disabled={!name.trim()}>
                 Create Room
+              </button>
+            </>
+          )}
+
+          {tab === 'board' && (
+            <>
+              <p className={styles.boardDesc}>
+                Use the app as a scorecard while you deal physical cards.
+                Enter each player's name and award points manually during play.
+              </p>
+
+              <label>Players at the table</label>
+              <div className={styles.toggleRow}>
+                {([2, 3] as const).map((n) => (
+                  <button key={n}
+                    className={boardPlayerCount === n ? styles.toggleActive : styles.toggle}
+                    onClick={() => setBoardPlayerCount(n)}>
+                    {n} Players
+                  </button>
+                ))}
+              </div>
+
+              <label>Player 1 (you)</label>
+              <input value={name} onChange={e => setName(e.target.value)} placeholder="Your name" maxLength={20} />
+
+              {Array.from({ length: boardPlayerCount - 1 }, (_, i) => (
+                <div key={i}>
+                  <label>Player {i + 2}</label>
+                  <input
+                    value={boardPlayerNames[i] ?? ''}
+                    onChange={e => {
+                      const next = [...boardPlayerNames];
+                      next[i] = e.target.value;
+                      setBoardPlayerNames(next);
+                    }}
+                    placeholder={`Player ${i + 2} name`}
+                    maxLength={20}
+                  />
+                </div>
+              ))}
+
+              <label className={styles.stakesLabel}>Optional Stakes</label>
+              <div className={styles.stakesGrid}>
+                {ALL_STAKES.map((s) => (
+                  <label key={s.id} className={styles.stakeRow} title={s.desc}>
+                    <input type="checkbox" checked={enabledStakes.includes(s.id)} onChange={() => toggleStake(s.id)} />
+                    <span className={styles.stakeName}>{s.label}</span>
+                    <span className={styles.stakeDesc}>{s.desc}</span>
+                  </label>
+                ))}
+                {enabledStakes.length > 0 && (
+                  <div className={styles.stakeValueRow}>
+                    <label className={styles.stakeValueLabel}>$ per unit</label>
+                    <input type="number" min="0.25" step="0.25" value={stakeValue}
+                      onChange={e => setStakeValue(Math.max(0.25, parseFloat(e.target.value) || 0.25))}
+                      className={styles.stakeValueInput} />
+                  </div>
+                )}
+              </div>
+
+              <button className="btn-primary" style={{ width: '100%' }} onClick={handleBoardOnly}
+                disabled={!name.trim() || boardPlayerNames.slice(0, boardPlayerCount - 1).some(n => !n.trim())}>
+                Start Board Game
               </button>
             </>
           )}
