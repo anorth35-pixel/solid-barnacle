@@ -20,8 +20,9 @@ export default function GamePage() {
     return <div className={styles.loading}>Connecting to game…</div>;
   }
 
-  const { phase, players, golfScores, course, starterCard } = gameState;
+  const { phase, players, golfScores, course, starterCard, stakesState, config } = gameState;
   const playerNames = players.map((p) => p.name);
+  const playerIds = players.map((p) => p.id);
   const showStarter = starterCard && ['pegging', 'hand-scoring', 'crib-scoring'].includes(phase);
 
   return (
@@ -33,8 +34,11 @@ export default function GamePage() {
           course={course}
           golfScores={golfScores}
           playerNames={playerNames}
+          playerIds={playerIds}
           mySeat={mySeat}
           onChoosePath={(holeNumber) => setPendingPathChoice({ holeNumber })}
+          stakesState={stakesState}
+          stakesConfig={config.stakesConfig}
         />
       </div>
 

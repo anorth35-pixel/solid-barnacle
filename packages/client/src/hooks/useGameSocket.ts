@@ -161,11 +161,13 @@ export function useGameSocket() {
       store().patchGameState({ golfScores });
     });
 
-    socket.on('game:over', ({ winnerSeat, finalGolfScores }: any) => {
+    socket.on('game:over', ({ winnerSeat, finalGolfScores, stakesState, finishingBonusAwardedTo }: any) => {
       store().patchGameState({
         winner: winnerSeat,
         golfScores: finalGolfScores,
         phase: 'game-over',
+        ...(stakesState ? { stakesState } : {}),
+        ...(finishingBonusAwardedTo !== undefined ? { finishingBonusAwardedTo } : {}),
       });
     });
 
@@ -176,16 +178,42 @@ export function useGameSocket() {
         for (const h of m.hazardsHit ?? []) {
           const type = h.peghole?.type;
           if (!type || type === 'fairway' || type === 'green' || type === 'cup' || type === 'tee') continue;
-          const label: Record<string, string> = {
-            rough: 'Rough!', trees: 'Trees!', sand: 'Sand Trap!',
-            water: 'Water Hazard!', 'out-of-bounds': 'Out of Bounds!',
+          const result = h.result ?? {};
+          const penalty = result.penaltyStrokes ?? 0;
+          const dice: [number, number] | undefined = result.diceRoll;
+          const outcome: string | undefined = result.diceOutcome;
+
+          // Title line
+          const titles: Record<string, string> = {
+            rough: '🌿 Rough', trees: '🌲 Trees',
+            sand: '🏖️ Sand Trap', water: '💧 Water Hazard',
+            'out-of-bounds': '🚫 Out of Bounds', 'three-putt': '⛳ Three-Putt',
           };
-          const penalty = h.result?.penaltyStrokes ?? 0;
-          store().addToast({
-            type: 'hazard',
-            message: label[type] ?? type,
-            sub: penalty > 0 ? `+${penalty} penalty stroke${penalty > 1 ? 's' : ''}` : h.result?.description ?? '',
-          });
+          const title = titles[type] ?? type;
+
+          // Sub line
+          let sub = '';
+          if (dice) {
+            const sum = dice[0] + dice[1];
+            const outcomeLabel: Record<string, string> = {
+              'advance3-strokeoff': `Lucky! Advance 3, −1 stroke`,
+              'advance1': `Safe! Advance 1, no penalty`,
+              'stay-penalty': `Unlucky. Stay put, +1 stroke`,
+            };
+            sub = `🎲 ${dice[0]}+${dice[1]}=${sum} — ${outcomeLabel[outcome ?? ''] ?? outcome ?? ''}`;
+          } else if (type === 'trees') {
+            sub = 'Retreat 2 pegholes, no penalty stroke';
+          } else if (type === 'water') {
+            sub = `+${penalty} penalty stroke, retreat 1 peghole`;
+          } else if (type === 'out-of-bounds') {
+            sub = `+${penalty} penalty strokes, back to action start`;
+          } else if (penalty > 0) {
+            sub = `+${penalty} penalty stroke${penalty > 1 ? 's' : ''}`;
+          } else {
+            sub = result.description ?? '';
+          }
+
+          store().addToast({ type: 'hazard', message: title, sub });
         }
       }
     }
@@ -198,11 +226,25 @@ export function useGameSocket() {
           const golfScore = gs?.golfScores.find((s: any) => s.playerId === m.playerId);
           const hs = golfScore?.holeScores.find((h: any) => h.holeNumber === holeNum);
           if (!hs) continue;
-          const term = getGolfTermForScore(hs.relativeToPar);
+
+          const rel = hs.relativeToPar;
+          const term = getGolfTermForScore(rel);
+          const relStr = rel === 0 ? 'E' : rel > 0 ? `+${rel}` : `${rel}`;
+
+          // Pick emoji and toast subtype
+          let emoji = '⛳';
+          let toastType: 'hole-complete' | 'birdie' | 'eagle' = 'hole-complete';
+          if (hs.isDoubleEagle) { emoji = '🦅🦅'; toastType = 'eagle'; }
+          else if (hs.isEagle)   { emoji = '🦅';    toastType = 'eagle'; }
+          else if (hs.isBirdie)  { emoji = '🐦';    toastType = 'birdie'; }
+          else if (rel >= 2)     { emoji = '😬'; }
+          else if (rel === 1)    { emoji = '😤'; }
+          else if (rel === 0)    { emoji = '✅'; }
+
           store().addToast({
-            type: 'hole-complete',
-            message: `${player?.name ?? 'Player'} — Hole ${holeNum}: ${term}`,
-            sub: `${hs.strokes} strokes (par ${hs.par})`,
+            type: toastType as any,
+            message: `${emoji} ${player?.name ?? 'Player'} — ${term}!`,
+            sub: `Hole ${holeNum}: ${hs.strokes} strokes · par ${hs.par} · ${relStr}`,
           });
         }
       }

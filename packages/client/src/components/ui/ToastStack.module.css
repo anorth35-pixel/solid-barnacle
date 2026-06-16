@@ -31,6 +31,18 @@
   border-left: 3px solid #ffd54f;
 }
 
+.birdie {
+  background: #163a1a;
+  border-left: 3px solid #66bb6a;
+  box-shadow: 0 4px 20px rgba(102, 187, 106, 0.25);
+}
+
+.eagle {
+  background: #2a2000;
+  border-left: 3px solid #ffd54f;
+  box-shadow: 0 4px 24px rgba(255, 213, 79, 0.35);
+}
+
 .info {
   background: #1a2a3a;
   border-left: 3px solid #4fc3f7;

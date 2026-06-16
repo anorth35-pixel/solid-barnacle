@@ -254,6 +254,8 @@ function executeCut(io: Server, roomCode: string, game: ServerGame, position: nu
     io.to(roomCode).emit('game:over', {
       winnerSeat: game.state.winner,
       finalGolfScores: game.state.golfScores,
+      stakesState: game.state.stakesState,
+      finishingBonusAwardedTo: game.state.finishingBonusAwardedTo,
     });
     return;
   }
@@ -267,6 +269,8 @@ function afterPegAction(io: Server, roomCode: string, game: ServerGame): void {
     io.to(roomCode).emit('game:over', {
       winnerSeat: game.state.winner,
       finalGolfScores: game.state.golfScores,
+      stakesState: game.state.stakesState,
+      finishingBonusAwardedTo: game.state.finishingBonusAwardedTo,
     });
     return;
   }
@@ -351,6 +355,8 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
       io.to(roomCode).emit('game:over', {
         winnerSeat: game.state.winner,
         finalGolfScores: game.state.golfScores,
+      stakesState: game.state.stakesState,
+      finishingBonusAwardedTo: game.state.finishingBonusAwardedTo,
       });
       return;
     }
@@ -422,6 +428,8 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
     io.to(roomCode).emit('game:over', {
       winnerSeat: game.state.winner,
       finalGolfScores: game.state.golfScores,
+      stakesState: game.state.stakesState,
+      finishingBonusAwardedTo: game.state.finishingBonusAwardedTo,
     });
     return;
   }
@@ -433,6 +441,8 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
     io.to(roomCode).emit('game:over', {
       winnerSeat: game.state.winner,
       finalGolfScores: game.state.golfScores,
+      stakesState: game.state.stakesState,
+      finishingBonusAwardedTo: game.state.finishingBonusAwardedTo,
     });
     return;
   }

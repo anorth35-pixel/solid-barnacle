@@ -12,7 +12,7 @@ export interface PendingDeclaration {
 
 export interface Toast {
   id: string;
-  type: 'hazard' | 'hole-complete' | 'info';
+  type: 'hazard' | 'hole-complete' | 'birdie' | 'eagle' | 'info';
   message: string;
   sub?: string;
 }

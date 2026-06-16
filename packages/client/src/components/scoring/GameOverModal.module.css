@@ -1,25 +1,27 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.75);
+  background: rgba(0,0,0,0.82);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 200;
+  overflow-y: auto;
+  padding: 24px 12px;
 }
 
 .panel {
   background: #1b3a1b;
   border: 2px solid #ffd54f;
   border-radius: 20px;
-  padding: 28px;
-  max-width: 440px;
-  width: 92%;
+  padding: 28px 24px;
+  max-width: 900px;
+  width: 100%;
   text-align: center;
   box-shadow: 0 8px 40px rgba(0,0,0,0.6);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
 }
 
@@ -31,40 +33,190 @@
   color: #ffd54f;
 }
 
-.table {
+/* ── Summary table ─────────────────────────────────────────────────────── */
+.summaryTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
-
-.table th, .table td {
+.summaryTable th, .summaryTable td {
   padding: 7px 10px;
   text-align: center;
   border-bottom: 1px solid rgba(255,255,255,0.1);
 }
-
-.table th {
-  font-size: 0.72rem;
+.summaryTable th {
+  font-size: 0.7rem;
   text-transform: uppercase;
-  opacity: 0.55;
-  text-align: center;
+  opacity: 0.5;
 }
+.summaryTable td:first-child { text-align: left; font-weight: 700; }
 
-.table td:first-child { text-align: left; }
-
-.winner td { background: rgba(255,213,79,0.08); }
+.winner td { background: rgba(255,213,79,0.07); }
 
 .under  { color: #81c784; font-weight: 600; }
 .even   { color: white; }
 .over   { color: #ef9a9a; }
-
 .penalty { color: #ff8a65; }
+.totalCell { font-weight: 800; }
 
-.totalCell { font-weight: 700; }
+/* ── Full 18-hole scorecard ─────────────────────────────────────────────── */
+.scorecardDetails {
+  width: 100%;
+  text-align: left;
+}
 
+.scorecardToggle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 4px 0;
+  list-style: none;
+}
+.scorecardToggle::-webkit-details-marker { display: none; }
+
+.scorecardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  overflow-x: auto;
+}
+
+.holeTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.holeTable th, .holeTable td {
+  padding: 3px 4px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  white-space: nowrap;
+}
+.holeTable th {
+  background: rgba(0,0,0,0.35);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.labelTh, .labelTd {
+  text-align: left !important;
+  padding-left: 8px !important;
+  min-width: 52px;
+  font-weight: 700;
+}
+.splitTh, .splitTd {
+  background: rgba(0,0,0,0.3) !important;
+  font-weight: 700;
+  border-left: 1px solid rgba(255,255,255,0.12);
+}
+.totalTh, .totalTd {
+  background: rgba(0,0,0,0.45) !important;
+  font-weight: 800;
+  border-left: 1px solid rgba(255,255,255,0.2);
+}
+
+.blank { color: rgba(255,255,255,0.2); }
+
+/* Golf notation */
+.scDoubleEagle { color: #ffd54f; font-weight: 800; }
+.scEagle       { color: #ffe57f; font-weight: 700; }
+.scBirdie      { color: #81c784; font-weight: 600; }
+.scPar         { }
+.scBogey       { color: #ff8a65; }
+.scDoubleBogey { color: #ef9a9a; }
+
+.circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+.doubleCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  box-shadow: 0 0 0 2.5px currentColor;
+}
+.square {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+}
+.doubleSquare {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+  box-shadow: 0 0 0 2.5px currentColor;
+}
+
+/* ── Stakes settlement ──────────────────────────────────────────────────── */
+.stakesSection {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.stakesTitle {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.45);
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.stakesGrid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stakeEntry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.07);
+  border-radius: 8px;
+  padding: 8px 16px;
+  min-width: 80px;
+  gap: 4px;
+}
+
+.stakeName {
+  font-weight: 700;
+  font-size: 0.84rem;
+}
+
+.stakePos { color: #81c784; font-size: 1rem; font-weight: 800; }
+.stakeNeg { color: #ef9a9a; font-size: 1rem; font-weight: 800; }
+
+/* ── Misc ───────────────────────────────────────────────────────────────── */
 .penaltyNote {
-  font-size: 0.75rem;
-  opacity: 0.5;
+  font-size: 0.72rem;
+  opacity: 0.45;
   font-style: italic;
   margin-top: -8px;
 }

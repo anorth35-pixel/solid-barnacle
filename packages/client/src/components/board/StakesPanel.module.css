@@ -1,0 +1,123 @@
+.panel {
+  overflow-x: auto;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  list-style: none;
+}
+.toggle::-webkit-details-marker { display: none; }
+.toggle:hover { background: rgba(255,255,255,0.1); }
+
+.badge {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 4px 6px;
+}
+
+.section {
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.sectionTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+/* Skins grid */
+.skinGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.skinCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255,255,255,0.06);
+  border-radius: 5px;
+  padding: 3px 6px;
+  min-width: 42px;
+  font-size: 0.74rem;
+}
+
+.skinHole {
+  font-size: 0.66rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.carry {
+  color: rgba(255,255,255,0.35);
+  font-size: 0.7rem;
+  font-style: italic;
+}
+
+/* Nassau rows */
+.nassauRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.nassauRow:last-child { border-bottom: none; }
+
+.nassauLabel {
+  width: 58px;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.tbd {
+  color: rgba(255,255,255,0.25);
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+/* Special bets */
+.betRow {
+  font-size: 0.78rem;
+  padding: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.betRow:last-child { border-bottom: none; }
+
+.none {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.25);
+  font-style: italic;
+}

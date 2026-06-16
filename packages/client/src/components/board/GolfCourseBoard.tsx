@@ -1,7 +1,8 @@
 import { useMemo, useRef, useEffect } from 'react';
-import type { Course, GolfHole, PegholeType } from '@cribbgolf/shared';
+import type { Course, GolfHole, PegholeType, StakesState, StakesConfig } from '@cribbgolf/shared';
 import type { PlayerGolfScore } from '@cribbgolf/shared';
 import styles from './GolfCourseBoard.module.css';
+import StakesPanel from './StakesPanel.js';
 
 const PLAYER_COLORS = ['#1565c0', '#c62828', '#2e7d32'];
 
@@ -611,11 +612,17 @@ interface Props {
   course: Course;
   golfScores: PlayerGolfScore[];
   playerNames: string[];
+  playerIds: string[];
   mySeat: number | null;
   onChoosePath?: (holeNumber: number) => void;
+  stakesState?: StakesState;
+  stakesConfig?: StakesConfig;
 }
 
-export default function GolfCourseBoard({ course, golfScores, playerNames, mySeat, onChoosePath }: Props) {
+export default function GolfCourseBoard({
+  course, golfScores, playerNames, playerIds, mySeat, onChoosePath,
+  stakesState, stakesConfig,
+}: Props) {
   const paneOrder = useMemo(() => {
     const all = golfScores.map((_, i) => i);
     if (mySeat === null) return all;
@@ -636,6 +643,14 @@ export default function GolfCourseBoard({ course, golfScores, playerNames, mySea
         />
       ))}
       <Scorecard course={course} golfScores={golfScores} playerNames={playerNames} />
+      {stakesState && stakesConfig && stakesConfig.enabled.length > 0 && (
+        <StakesPanel
+          stakesState={stakesState}
+          stakesConfig={stakesConfig}
+          playerNames={playerNames}
+          playerIds={playerIds}
+        />
+      )}
     </div>
   );
 }

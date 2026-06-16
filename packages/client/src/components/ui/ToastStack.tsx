@@ -5,6 +5,8 @@ import styles from './ToastStack.module.css';
 const ICONS: Record<Toast['type'], string> = {
   hazard: '⚠️',
   'hole-complete': '⛳',
+  birdie: '🐦',
+  eagle: '🦅',
   info: 'ℹ️',
 };
 
