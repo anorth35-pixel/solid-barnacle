@@ -25,6 +25,7 @@ export default function LobbyPage() {
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [aiCount, setAICount] = useState<1 | 2>(1);
   const [enabledStakes, setEnabledStakes] = useState<StakeType[]>([]);
+  const [stakeValue, setStakeValue] = useState<number>(1);
 
   function toggleStake(id: StakeType) {
     setEnabledStakes((prev) =>
@@ -34,7 +35,7 @@ export default function LobbyPage() {
 
   function stakesConfig() {
     return enabledStakes.length > 0
-      ? { enabled: enabledStakes, unitValue: 1 }
+      ? { enabled: enabledStakes, unitValue: Math.max(0.25, stakeValue) }
       : undefined;
   }
   const navigate = useNavigate();
@@ -158,6 +159,19 @@ export default function LobbyPage() {
                     <span className={styles.stakeDesc}>{s.desc}</span>
                   </label>
                 ))}
+                {enabledStakes.length > 0 && (
+                  <div className={styles.stakeValueRow}>
+                    <label className={styles.stakeValueLabel}>$ per unit</label>
+                    <input
+                      type="number"
+                      min="0.25"
+                      step="0.25"
+                      value={stakeValue}
+                      onChange={(e) => setStakeValue(Math.max(0.25, parseFloat(e.target.value) || 0.25))}
+                      className={styles.stakeValueInput}
+                    />
+                  </div>
+                )}
               </div>
 
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleVsAI}
@@ -200,6 +214,19 @@ export default function LobbyPage() {
                     <span className={styles.stakeDesc}>{s.desc}</span>
                   </label>
                 ))}
+                {enabledStakes.length > 0 && (
+                  <div className={styles.stakeValueRow}>
+                    <label className={styles.stakeValueLabel}>$ per unit</label>
+                    <input
+                      type="number"
+                      min="0.25"
+                      step="0.25"
+                      value={stakeValue}
+                      onChange={(e) => setStakeValue(Math.max(0.25, parseFloat(e.target.value) || 0.25))}
+                      className={styles.stakeValueInput}
+                    />
+                  </div>
+                )}
               </div>
 
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleCreate}

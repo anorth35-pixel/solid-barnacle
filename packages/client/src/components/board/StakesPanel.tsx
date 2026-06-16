@@ -27,7 +27,12 @@ export default function StakesPanel({ stakesState, stakesConfig, playerNames, pl
     <details className={styles.panel}>
       <summary className={styles.toggle}>
         <span>Stakes</span>
-        <span className={styles.badge}>{enabled.join(' · ')}</span>
+        <span className={styles.badge}>
+          {enabled.join(' · ')}
+          {stakesConfig.unitValue !== 1 || true
+            ? ` · $${stakesConfig.unitValue.toFixed(stakesConfig.unitValue % 1 === 0 ? 0 : 2)}/unit`
+            : ''}
+        </span>
       </summary>
 
       <div className={styles.body}>

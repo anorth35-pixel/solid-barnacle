@@ -61,6 +61,8 @@ export default function GameOverModal() {
   function stakesSettlement() {
     if (!stakesState || !stakesConfig || !stakesConfig.enabled.length) return null;
     const playerIds = players.map(p => p.id);
+    const uv = stakesConfig.unitValue ?? 1;
+    const fmt = (n: number) => `$${Math.abs(n * uv).toFixed(uv % 1 === 0 ? 0 : 2)}`;
 
     // Tally units per player
     const units: Record<string, number> = {};
@@ -107,8 +109,13 @@ export default function GameOverModal() {
               <div key={p.id} className={styles.stakeEntry}>
                 <span style={{ color: PLAYER_COLORS[i] }} className={styles.stakeName}>{p.name}</span>
                 <span className={net > 0 ? styles.stakePos : net < 0 ? styles.stakeNeg : ''}>
-                  {net > 0 ? `+${net}` : net} unit{Math.abs(net) !== 1 ? 's' : ''}
+                  {net > 0 ? `+${fmt(net)}` : net < 0 ? `-${fmt(net)}` : 'even'}
                 </span>
+                {uv !== 1 && (
+                  <span className={styles.stakeUnits}>
+                    {net > 0 ? `+${net}` : net} unit{Math.abs(net) !== 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
             );
           })}
