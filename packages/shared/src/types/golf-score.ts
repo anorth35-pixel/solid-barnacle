@@ -3,10 +3,14 @@ import type { PegholeType } from './board.js';
 export interface HoleScore {
   holeNumber: number;
   par: number;
-  strokes: number;
-  relativeToPar: number;
-  hazardPenalties: number;
+  strokes: number;          // total cribbage points spent on the hole (including penalty strokes)
+  relativeToPar: number;    // strokes - par (negative = under par)
+  penaltyStrokes: number;   // strokes added by hazard penalties only
   hazardTypes: PegholeType[];
+  isBirdie: boolean;        // completed hole from tee in one scoring action, 0 penalty
+  isEagle: boolean;         // birdie + landed exactly on cup (no leftover advance)
+  isDoubleEagle: boolean;   // eagled current hole AND landed exactly on next hole's cup
+  startedFromTee: boolean;  // whether peg was at tee (index 0) when scoring action began
 }
 
 export interface PlayerGolfScore {

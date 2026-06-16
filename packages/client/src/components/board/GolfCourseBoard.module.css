@@ -117,29 +117,139 @@
 .scorecardToggle:hover { background: rgba(255,255,255,0.1); }
 .scorecardTotals { display: flex; gap: 10px; margin-left: auto; font-weight: 700; }
 
+.scorecardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   background: rgba(255,255,255,0.04);
   border-radius: 6px;
   overflow: hidden;
-  margin-top: 4px;
 }
 .table th, .table td {
-  padding: 4px 7px;
+  padding: 3px 5px;
   text-align: center;
   border-bottom: 1px solid rgba(255,255,255,0.07);
+  white-space: nowrap;
 }
 .table th {
   background: rgba(0,0,0,0.3);
   font-weight: 700;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
 }
-.totalRow td { font-weight: 700; background: rgba(0,0,0,0.2); }
-.eagle      { color: #ffd54f; font-weight: 700; }
-.birdie     { color: #81c784; font-weight: 600; }
-.par        { }
-.bogey      { color: #ff8a65; }
-.doubleBogey { color: #ef9a9a; }
+.thLabel {
+  text-align: left !important;
+  padding-left: 8px !important;
+  min-width: 56px;
+}
+.thSplit {
+  background: rgba(0,0,0,0.45) !important;
+  font-weight: 800 !important;
+  border-left: 2px solid rgba(255,255,255,0.15);
+}
+.thTotal {
+  background: rgba(0,0,0,0.55) !important;
+  font-weight: 800 !important;
+  border-left: 2px solid rgba(255,255,255,0.25);
+}
+.hdcp { color: rgba(255,255,255,0.4); font-size: 0.66rem; }
+.playerLabel {
+  text-align: left !important;
+  padding-left: 8px !important;
+  font-weight: 700;
+  font-size: 0.74rem;
+}
+.splitCell {
+  border-left: 2px solid rgba(255,255,255,0.15);
+  font-weight: 700;
+  background: rgba(0,0,0,0.18);
+}
+.totalCell {
+  border-left: 2px solid rgba(255,255,255,0.25);
+  font-weight: 800;
+  background: rgba(0,0,0,0.28);
+}
+.blank { color: rgba(255,255,255,0.25); }
+
+/* ── Golf score notation ──────────────────────────────────────────────── */
+.scDoubleEagle { color: #ffd54f; font-weight: 800; }
+.scEagle       { color: #ffe57f; font-weight: 700; }
+.scBirdie      { color: #81c784; font-weight: 600; }
+.scPar         { }
+.scBogey       { color: #ff8a65; }
+.scDoubleBogey { color: #ef9a9a; }
+
+/* Circle around birdie score */
+.notation_circle span,
+.notation_circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  line-height: 1;
+}
+
+/* Double circle for eagle/double eagle */
+.notation_doubleCircle span,
+.notation_doubleCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  box-shadow: 0 0 0 2.5px currentColor;
+  line-height: 1;
+}
+
+/* Square around bogey score */
+.notation_square span,
+.notation_square {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+  line-height: 1;
+}
+
+/* Double square for double bogey */
+.notation_doubleSquare span,
+.notation_doubleSquare {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid currentColor;
+  box-shadow: 0 0 0 2.5px currentColor;
+  line-height: 1;
+}
+
+/* ── Legend ───────────────────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 5px 8px;
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.6);
+  align-items: center;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

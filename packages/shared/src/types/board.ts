@@ -7,6 +7,7 @@ export type PegholeType =
   | 'water'
   | 'out-of-bounds'
   | 'green'
+  | 'three-putt'
   | 'cup';
 
 export interface Peghole {
@@ -32,6 +33,7 @@ export interface GolfHole {
   par: number;          // 3 | 4 | 5
   paths: GolfPath[];    // exactly 3 paths (A, B, C)
   handicap: number;     // 1–18 difficulty rank
+  threeHoleGreen?: boolean; // green has a three-putt peghole
 }
 
 export interface Course {
@@ -45,7 +47,10 @@ export interface Course {
 export interface HazardResult {
   penaltyStrokes: number;
   retreatToIndex: number | null;  // null means stay
+  advanceBonus: number;           // extra pegholes to advance (dice outcome: advance3 = +2 net)
   description: string;
+  diceRoll?: [number, number];    // for sand/rough/three-putt dice mechanics
+  diceOutcome?: 'advance1' | 'stay-penalty' | 'advance3-strokeoff';
 }
 
 export interface PegMovement {

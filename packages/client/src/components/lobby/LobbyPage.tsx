@@ -2,8 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSocket } from '../../socket/socket-client.js';
 import { useGameStore } from '../../store/game-store.js';
-import type { GameConfig, AIDifficulty } from '@cribbgolf/shared';
+import type { GameConfig, AIDifficulty, StakeType } from '@cribbgolf/shared';
 import styles from './LobbyPage.module.css';
+
+const ALL_STAKES: { id: StakeType; label: string; desc: string }[] = [
+  { id: 'skins',   label: 'Skins',   desc: 'Win a hole outright to claim the skin' },
+  { id: 'nassau',  label: 'Nassau',  desc: 'Three bets: front 9, back 9, overall' },
+  { id: 'sandies', label: 'Sandies', desc: 'Par or better after hitting sand' },
+  { id: 'barkies', label: 'Barkies', desc: 'Par or better after hitting trees' },
+  { id: 'greenies',label: 'Greenies',desc: 'First to reach the green on par 3s' },
+];
 
 type Tab = 'create' | 'join' | 'ai';
 
@@ -16,12 +24,28 @@ export default function LobbyPage() {
   const [manualScoring, setManualScoring] = useState(false);
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [aiCount, setAICount] = useState<1 | 2>(1);
+  const [enabledStakes, setEnabledStakes] = useState<StakeType[]>([]);
+
+  function toggleStake(id: StakeType) {
+    setEnabledStakes((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  }
+
+  function stakesConfig() {
+    return enabledStakes.length > 0
+      ? { enabled: enabledStakes, unitValue: 1 }
+      : undefined;
+  }
   const navigate = useNavigate();
   const { setRoom, setMySeat } = useGameStore();
 
   function handleCreate() {
     if (!name.trim()) return;
-    const config: Partial<GameConfig> = { playerCount, mugginsEnabled: muggins, manualScoring, mode: 'remote' };
+    const config: Partial<GameConfig> = {
+      playerCount, mugginsEnabled: muggins, manualScoring, mode: 'remote',
+      stakesConfig: stakesConfig(),
+    };
     getSocket().emit('room:create', { playerName: name.trim(), config });
     getSocket().once('room:created', ({ roomCode: rc, room: r }: any) => {
       setRoom(r, rc);
@@ -43,6 +67,7 @@ export default function LobbyPage() {
       manualScoring,
       mode: 'vs-ai',
       aiDifficulty,
+      stakesConfig: stakesConfig(),
     };
     getSocket().emit('room:create', { playerName: name.trim(), config });
     getSocket().once('room:created', ({ roomCode: rc, room: r }: any) => {
@@ -120,6 +145,21 @@ export default function LobbyPage() {
                 Manual point counting
               </label>
 
+              <label className={styles.stakesLabel}>Optional Stakes</label>
+              <div className={styles.stakesGrid}>
+                {ALL_STAKES.map((s) => (
+                  <label key={s.id} className={styles.stakeRow} title={s.desc}>
+                    <input
+                      type="checkbox"
+                      checked={enabledStakes.includes(s.id)}
+                      onChange={() => toggleStake(s.id)}
+                    />
+                    <span className={styles.stakeName}>{s.label}</span>
+                    <span className={styles.stakeDesc}>{s.desc}</span>
+                  </label>
+                ))}
+              </div>
+
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleVsAI}
                 disabled={!name.trim()}>
                 Play vs Computer
@@ -146,6 +186,22 @@ export default function LobbyPage() {
                 <input type="checkbox" checked={manualScoring} onChange={(e) => setManualScoring(e.target.checked)} />
                 Manual point counting
               </label>
+
+              <label className={styles.stakesLabel}>Optional Stakes</label>
+              <div className={styles.stakesGrid}>
+                {ALL_STAKES.map((s) => (
+                  <label key={s.id} className={styles.stakeRow} title={s.desc}>
+                    <input
+                      type="checkbox"
+                      checked={enabledStakes.includes(s.id)}
+                      onChange={() => toggleStake(s.id)}
+                    />
+                    <span className={styles.stakeName}>{s.label}</span>
+                    <span className={styles.stakeDesc}>{s.desc}</span>
+                  </label>
+                ))}
+              </div>
+
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleCreate}
                 disabled={!name.trim()}>
                 Create Room

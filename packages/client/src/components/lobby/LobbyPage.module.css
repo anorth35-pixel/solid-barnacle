@@ -81,3 +81,41 @@
   flex-direction: row !important;
   font-size: 0.9rem;
 }
+
+.stakesLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  margin-bottom: -4px;
+}
+
+.stakesGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--gray-light);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.stakeRow {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  flex-direction: row !important;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.stakeName {
+  font-weight: 700;
+  min-width: 64px;
+  color: var(--green-dark);
+}
+
+.stakeDesc {
+  color: var(--gray-dark);
+  font-size: 0.78rem;
+  opacity: 0.8;
+}

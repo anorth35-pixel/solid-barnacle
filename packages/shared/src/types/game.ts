@@ -3,6 +3,7 @@ import type { Player, PlayerSeat } from './player.js';
 import type { ScoreEvent, MugginsState } from './scoring.js';
 import type { Course, PegMovement } from './board.js';
 import type { PlayerGolfScore } from './golf-score.js';
+import type { StakesConfig, StakesState } from './stakes.js';
 
 export type GamePhase =
   | 'lobby'
@@ -26,6 +27,7 @@ export interface GameConfig {
   mugginsWindowMs: number;
   aiDifficulty?: AIDifficulty;
   manualScoring: boolean;
+  stakesConfig?: StakesConfig;
 }
 
 export interface PeggingState {
@@ -54,4 +56,6 @@ export interface GameState {
   golfScores: PlayerGolfScore[];
   course: Course;
   pendingPegMovements: PegMovement[];
+  stakesState: StakesState;
+  finishingBonusAwardedTo: string | null; // playerId who got the −2 finishing bonus
 }

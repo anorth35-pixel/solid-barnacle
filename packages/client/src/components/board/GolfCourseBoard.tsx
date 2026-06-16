@@ -18,7 +18,7 @@ const PATH_COLORS = ['#81d4fa', '#ffe082', '#f48fb1'];
 const TYPE_COLOR: Record<string, string> = {
   tee: '#bcaaa4', fairway: '#66bb6a', rough: '#558b2f',
   trees: '#33691e', sand: '#f9a825', water: '#29b6f6',
-  'out-of-bounds': '#ef5350', green: '#a5d6a7', cup: '#ffd54f',
+  'out-of-bounds': '#ef5350', green: '#a5d6a7', 'three-putt': '#ce93d8', cup: '#ffd54f',
 };
 
 // ── Bezier helpers ────────────────────────────────────────────────────────────
@@ -78,7 +78,7 @@ function pathCP(spine: BCP, pathIdx: number, holeNum: number): BCP {
 }
 
 // ── Hazard shapes ─────────────────────────────────────────────────────────────
-const HAZARD_SET = new Set(['rough', 'trees', 'sand', 'water', 'out-of-bounds']);
+const HAZARD_SET = new Set(['rough', 'trees', 'sand', 'water', 'out-of-bounds', 'three-putt']);
 
 // Amoebic shapes designed at ~130px scale, rendered via scale(0.13) ≈ 17px
 const S = 0.13;
@@ -318,12 +318,28 @@ function HoleSVG({ hole, selectedPathId, pegIndex, playerColor, holeRelativeToPa
 
 // ── Scorecard ──────────────────────────────────────────────────────────────────
 
-function scoreClass(rel: number, s: Record<string, string>) {
-  if (rel <= -2) return s.eagle;
-  if (rel === -1) return s.birdie;
-  if (rel === 0) return s.par;
-  if (rel === 1) return s.bogey;
-  return s.doubleBogey;
+function ScoreCell({ strokes, rel, isBirdie, isEagle, isDoubleEagle }: {
+  strokes: number; rel: number;
+  isBirdie?: boolean; isEagle?: boolean; isDoubleEagle?: boolean;
+}) {
+  let cls = styles.scPar;
+  let notation = '';
+  if (isDoubleEagle || rel <= -3) { cls = styles.scDoubleEagle; notation = 'doubleCircle'; }
+  else if (isEagle || rel === -2)  { cls = styles.scEagle;       notation = 'doubleCircle'; }
+  else if (isBirdie || rel === -1) { cls = styles.scBirdie;      notation = 'circle'; }
+  else if (rel === 1)              { cls = styles.scBogey;       notation = 'square'; }
+  else if (rel >= 2)               { cls = styles.scDoubleBogey; notation = 'doubleSquare'; }
+  return (
+    <td className={cls}>
+      <span className={notation ? styles[`notation_${notation}`] : ''}>
+        {strokes}
+      </span>
+    </td>
+  );
+}
+
+function relStr(rel: number) {
+  return rel === 0 ? 'E' : rel > 0 ? `+${rel}` : `${rel}`;
 }
 
 interface ScorecardProps {
@@ -333,6 +349,39 @@ interface ScorecardProps {
 }
 
 function Scorecard({ course, golfScores, playerNames }: ScorecardProps) {
+  const front = course.holes.slice(0, 9);
+  const back  = course.holes.slice(9, 18);
+
+  const frontPar = front.reduce((s, h) => s + h.par, 0);
+  const backPar  = back.reduce((s, h) => s + h.par, 0);
+
+  function playerFrontStrokes(gs: PlayerGolfScore) {
+    return front.reduce((s, h) => {
+      const hs = gs.holeScores.find(x => x.holeNumber === h.number);
+      return s + (hs?.strokes ?? 0);
+    }, 0);
+  }
+  function playerBackStrokes(gs: PlayerGolfScore) {
+    return back.reduce((s, h) => {
+      const hs = gs.holeScores.find(x => x.holeNumber === h.number);
+      return s + (hs?.strokes ?? 0);
+    }, 0);
+  }
+  function playerFrontRel(gs: PlayerGolfScore) {
+    return front.reduce((s, h) => {
+      const hs = gs.holeScores.find(x => x.holeNumber === h.number);
+      return s + (hs?.relativeToPar ?? 0);
+    }, 0);
+  }
+  function playerBackRel(gs: PlayerGolfScore) {
+    return back.reduce((s, h) => {
+      const hs = gs.holeScores.find(x => x.holeNumber === h.number);
+      return s + (hs?.relativeToPar ?? 0);
+    }, 0);
+  }
+
+  const pCount = golfScores.length;
+
   return (
     <details className={styles.scorecard}>
       <summary className={styles.scorecardToggle}>
@@ -340,43 +389,128 @@ function Scorecard({ course, golfScores, playerNames }: ScorecardProps) {
         <span className={styles.scorecardTotals}>
           {golfScores.map((gs, i) => (
             <span key={i} style={{ color: PLAYER_COLORS[i] }}>
-              {gs.totalRelativeToPar > 0 ? `+${gs.totalRelativeToPar}` : gs.totalRelativeToPar === 0 ? 'E' : gs.totalRelativeToPar}
+              {relStr(gs.totalRelativeToPar)}
             </span>
           ))}
         </span>
       </summary>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th>Hole</th><th>Par</th>
-            {playerNames.map((n, i) => <th key={i}>{n}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {course.holes.map((hole) => (
-            <tr key={hole.number}>
-              <td>{hole.number}</td>
-              <td>{hole.par}</td>
-              {golfScores.map((gs, pi) => {
-                const hs = (gs.holeScores as any[]).find(h => h.holeNumber === hole.number);
-                return (
-                  <td key={pi} className={hs ? scoreClass(hs.relativeToPar, styles) : ''}>
-                    {hs ? hs.strokes : '–'}
-                  </td>
-                );
-              })}
+
+      <div className={styles.scorecardInner}>
+        {/* Front 9 */}
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th className={styles.thLabel}>Hole</th>
+              {front.map(h => <th key={h.number}>{h.number}</th>)}
+              <th className={styles.thSplit}>OUT</th>
             </tr>
-          ))}
-          <tr className={styles.totalRow}>
-            <td colSpan={2}>Total</td>
-            {golfScores.map((gs, pi) => (
-              <td key={pi}>
-                {gs.totalRelativeToPar >= 0 ? `+${gs.totalRelativeToPar}` : gs.totalRelativeToPar}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+            <tr>
+              <th className={styles.thLabel}>Par</th>
+              {front.map(h => <th key={h.number}>{h.par}</th>)}
+              <th className={styles.thSplit}>{frontPar}</th>
+            </tr>
+            <tr>
+              <th className={styles.thLabel}>Hdcp</th>
+              {front.map(h => <th key={h.number} className={styles.hdcp}>{h.handicap}</th>)}
+              <th className={styles.thSplit}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {golfScores.map((gs, pi) => {
+              const frontStrok = playerFrontStrokes(gs);
+              const frontRel   = playerFrontRel(gs);
+              return (
+                <tr key={pi}>
+                  <td className={styles.playerLabel} style={{ color: PLAYER_COLORS[pi] }}>
+                    {playerNames[pi]}
+                  </td>
+                  {front.map(h => {
+                    const hs = gs.holeScores.find(x => x.holeNumber === h.number);
+                    return hs
+                      ? <ScoreCell key={h.number}
+                          strokes={hs.strokes} rel={hs.relativeToPar}
+                          isBirdie={hs.isBirdie} isEagle={hs.isEagle} isDoubleEagle={hs.isDoubleEagle} />
+                      : <td key={h.number} className={styles.blank}>–</td>;
+                  })}
+                  <td className={styles.splitCell}>
+                    {frontStrok > 0 ? `${frontStrok} (${relStr(frontRel)})` : '–'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Back 9 */}
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th className={styles.thLabel}>Hole</th>
+              {back.map(h => <th key={h.number}>{h.number}</th>)}
+              <th className={styles.thSplit}>IN</th>
+              <th className={styles.thTotal}>TOTAL</th>
+            </tr>
+            <tr>
+              <th className={styles.thLabel}>Par</th>
+              {back.map(h => <th key={h.number}>{h.par}</th>)}
+              <th className={styles.thSplit}>{backPar}</th>
+              <th className={styles.thTotal}>{frontPar + backPar}</th>
+            </tr>
+            <tr>
+              <th className={styles.thLabel}>Hdcp</th>
+              {back.map(h => <th key={h.number} className={styles.hdcp}>{h.handicap}</th>)}
+              <th className={styles.thSplit}></th>
+              <th className={styles.thTotal}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {golfScores.map((gs, pi) => {
+              const backStrok  = playerBackStrokes(gs);
+              const backRel    = playerBackRel(gs);
+              const totStrok   = gs.totalStrokes;
+              const totRel     = gs.totalRelativeToPar;
+              return (
+                <tr key={pi}>
+                  <td className={styles.playerLabel} style={{ color: PLAYER_COLORS[pi] }}>
+                    {playerNames[pi]}
+                  </td>
+                  {back.map(h => {
+                    const hs = gs.holeScores.find(x => x.holeNumber === h.number);
+                    return hs
+                      ? <ScoreCell key={h.number}
+                          strokes={hs.strokes} rel={hs.relativeToPar}
+                          isBirdie={hs.isBirdie} isEagle={hs.isEagle} isDoubleEagle={hs.isDoubleEagle} />
+                      : <td key={h.number} className={styles.blank}>–</td>;
+                  })}
+                  <td className={styles.splitCell}>
+                    {backStrok > 0 ? `${backStrok} (${relStr(backRel)})` : '–'}
+                  </td>
+                  <td className={styles.totalCell}>
+                    {totStrok > 0 ? `${totStrok} (${relStr(totRel)})` : '–'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Legend */}
+        <div className={styles.legend}>
+          <span className={`${styles.legendItem} ${styles.scDoubleEagle}`}>
+            <span className={styles['notation_doubleCircle']}>2</span> Eagle/Double Eagle
+          </span>
+          <span className={`${styles.legendItem} ${styles.scBirdie}`}>
+            <span className={styles['notation_circle']}>3</span> Birdie
+          </span>
+          <span className={styles.legendItem}>4 Par</span>
+          <span className={`${styles.legendItem} ${styles.scBogey}`}>
+            <span className={styles['notation_square']}>5</span> Bogey
+          </span>
+          <span className={`${styles.legendItem} ${styles.scDoubleBogey}`}>
+            <span className={styles['notation_doubleSquare']}>6</span> Dbl Bogey
+          </span>
+        </div>
+      </div>
     </details>
   );
 }

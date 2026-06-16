@@ -3,12 +3,14 @@ import type { Player, PlayerSeat } from '@cribbgolf/shared';
 import type { Card } from '@cribbgolf/shared';
 import type { ScoreBreakdown, ScoreEvent, MugginsState, ScoreItem } from '@cribbgolf/shared';
 import type { PegMovement } from '@cribbgolf/shared';
+import type { HoleScore } from '@cribbgolf/shared';
 import {
   createDeck, shuffle, deal,
   scoreHand, scorePeggingPlay, scoreNibs,
   createPeggingState, canPlayCard, hasPlayableCard, resetPeggingCount, allHandsEmpty,
   createInitialGolfScore, DEFAULT_COURSE,
   advancePeg,
+  createInitialStakesState,
 } from '@cribbgolf/shared';
 import { MUGGINS_WINDOW_MS } from '../config.js';
 
@@ -47,6 +49,8 @@ export class ServerGame {
       golfScores: players.map((p) => createInitialGolfScore(p.id)),
       course: DEFAULT_COURSE,
       pendingPegMovements: [],
+      stakesState: createInitialStakesState(),
+      finishingBonusAwardedTo: null,
     };
   }
 
@@ -349,15 +353,95 @@ export class ServerGame {
     const gsIndex = this.state.golfScores.findIndex((g) => g.playerId === player.id);
     if (gsIndex === -1 || breakdown.total === 0) return;
 
+    const isFirstFinisher =
+      this.state.finishingBonusAwardedTo === null &&
+      this.state.golfScores[gsIndex].holesCompleted < 18;
+
     const { updated, movement } = advancePeg(
       this.state.golfScores[gsIndex],
       breakdown.total,
       this.state.course.holes,
+      isFirstFinisher,
     );
+
+    // If this action completed hole 18 and no bonus awarded yet, record it
+    if (
+      isFirstFinisher &&
+      updated.isFinished &&
+      this.state.finishingBonusAwardedTo === null
+    ) {
+      this.state.finishingBonusAwardedTo = player.id;
+    }
+
     this.state.golfScores[gsIndex] = updated;
     this.state.pendingPegMovements.push(movement);
+
+    // Update stakes for any holes just completed
+    for (const holeNum of movement.holesCompleted) {
+      const holeScore = updated.holeScores.find((h) => h.holeNumber === holeNum);
+      if (holeScore) this.updateStakes(player.id, holeScore, movement.hazardsHit);
+    }
+
     // AI players auto-choose their next path immediately
     this.autoChoosePathsForAI();
+  }
+
+  private updateStakes(
+    playerId: string,
+    holeScore: HoleScore,
+    hazardsHit: PegMovement['hazardsHit'],
+  ): void {
+    const stakes = this.state.config.stakesConfig;
+    if (!stakes || stakes.enabled.length === 0) return;
+    const st = this.state.stakesState;
+    const holeNum = holeScore.holeNumber;
+
+    // Skins — record who completed the hole (ties resolved later at game end)
+    if (stakes.enabled.includes('skins')) {
+      const existing = st.skins.find((s) => s.holeNumber === holeNum);
+      if (!existing) {
+        // First player to complete this hole wins the skin (or carries if tied)
+        st.skins.push({ holeNumber: holeNum, winnerPlayerId: playerId, carried: false });
+      } else if (existing.winnerPlayerId && existing.winnerPlayerId !== playerId) {
+        // Another player also completed — check scores
+        const otherGs = this.state.golfScores.find((g) => g.playerId === existing.winnerPlayerId);
+        const otherHole = otherGs?.holeScores.find((h) => h.holeNumber === holeNum);
+        if (otherHole && otherHole.relativeToPar === holeScore.relativeToPar) {
+          existing.winnerPlayerId = null;
+          existing.carried = true;
+        } else if (otherHole && holeScore.relativeToPar < otherHole.relativeToPar) {
+          existing.winnerPlayerId = playerId;
+          existing.carried = false;
+        }
+      }
+    }
+
+    // Sandies — completed hole with at least one sand hazard and ≤ par strokes
+    if (stakes.enabled.includes('sandies')) {
+      const hitSand = hazardsHit.some((h) => h.peghole.holeNumber === holeNum && h.peghole.type === 'sand');
+      if (hitSand && holeScore.relativeToPar <= 0) {
+        st.sandies.push({ holeNumber: holeNum, playerId, achieved: true });
+      }
+    }
+
+    // Barkies — completed hole having hit trees and ≤ par strokes
+    if (stakes.enabled.includes('barkies')) {
+      const hitTrees = hazardsHit.some((h) => h.peghole.holeNumber === holeNum && h.peghole.type === 'trees');
+      if (hitTrees && holeScore.relativeToPar <= 0) {
+        st.barkies.push({ holeNumber: holeNum, playerId, achieved: true });
+      }
+    }
+
+    // Greenies — first to reach the green on par-3 holes (first player to complete = winner)
+    if (stakes.enabled.includes('greenies')) {
+      const hole = this.state.course.holes[holeNum - 1];
+      if (hole && hole.par === 3) {
+        const alreadyClaimed = st.greenies.some((g) => g.holeNumber === holeNum && g.achieved);
+        if (!alreadyClaimed) {
+          st.greenies.push({ holeNumber: holeNum, playerId, achieved: true });
+        }
+      }
+    }
   }
 
   choosePath(playerId: string, holeNumber: number, pathId: string): boolean {

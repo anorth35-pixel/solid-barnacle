@@ -5,6 +5,7 @@ export * from './types/game.js';
 export * from './types/scoring.js';
 export * from './types/board.js';
 export * from './types/golf-score.js';
+export * from './types/stakes.js';
 export * from './types/socket.js';
 
 // Engine
