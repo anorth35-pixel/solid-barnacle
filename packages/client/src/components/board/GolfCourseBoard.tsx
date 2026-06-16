@@ -80,43 +80,93 @@ function pathCP(spine: BCP, pathIdx: number, holeNum: number): BCP {
 // ── Hazard shapes ─────────────────────────────────────────────────────────────
 const HAZARD_SET = new Set(['rough', 'trees', 'sand', 'water', 'out-of-bounds']);
 
-function HazardShape({ type, cx, cy }: { type: PegholeType; cx: number; cy: number }) {
-  // Push hazard visual to the outside edge of the fairway (away from center-line)
-  const oy = cy < SVG_H / 2 ? -16 : 16;
+// Amoebic shapes designed at ~130px scale, rendered via scale(0.13) ≈ 17px
+const S = 0.13;
 
-  if (type === 'sand')
-    return <ellipse cx={cx} cy={cy + oy} rx={13} ry={8}
-      fill="#f9a825" stroke="#f57f17" strokeWidth={0.5} opacity={0.92} />;
+function HazardShape({ type, cx, cy, holeNum }: { type: PegholeType; cx: number; cy: number; holeNum: number }) {
+  const oy = cy < SVG_H / 2 ? -12 : 12;
+  const hx = cx;
+  const hy = cy + oy;
 
-  if (type === 'water') {
-    const x = cx, y = cy + oy;
+  if (type === 'sand') {
     return (
-      <path
-        d={`M${x-13},${y} C${x-17},${y-8} ${x-2},${y-12} ${x+5},${y-8} C${x+16},${y-5} ${x+17},${y+4} ${x+11},${y+9} C${x+5},${y+14} ${x-10},${y+12} ${x-15},${y+5} Z`}
-        fill="#1565c0" opacity={0.78} />
-    );
-  }
-
-  if (type === 'trees') {
-    const x = cx, y = cy + oy;
-    return (
-      <g>
-        <circle cx={x - 7} cy={y - 4} r={7} fill="#1b5e20" opacity={0.88} />
-        <circle cx={x + 6} cy={y + 2} r={6} fill="#1b5e20" opacity={0.88} />
-        <circle cx={x - 1} cy={y + 8} r={5} fill="#1b5e20" opacity={0.88} />
+      <g transform={`translate(${hx},${hy}) scale(${S})`}>
+        {/* Amoebic kidney — 8 bezier segments, alternating convex/concave */}
+        <path
+          d="M 0,-60 C 32,-76 70,-60 78,-34 C 86,-8 66,14 44,6 C 22,-2 24,28 36,50 C 48,72 38,84 10,78 C -18,72 -34,42 -36,10 C -38,-22 -24,-44 -36,-64 C -48,-84 -30,-90 -12,-76 C -6,-70 -4,-64 0,-60 Z"
+          fill={`url(#sg-${holeNum})`} />
+        {/* Grain dots */}
+        {([[-10,-18],[22,2],[2,32],[-24,12],[32,-14]] as [number,number][]).map(([dx,dy],i) => (
+          <circle key={i} cx={dx} cy={dy} r={5} fill="#c4a030" opacity={0.45} />
+        ))}
+        {/* White highlight lip on convex curve */}
+        <path d="M 2,-58 C 30,-73 68,-58 76,-34" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={6} strokeLinecap="round" />
+        {/* Dark shadow on concave steep side */}
+        <path d="M -36,-62 C -48,-82 -30,-88 -12,-74" fill="none" stroke="rgba(0,0,0,0.28)" strokeWidth={9} strokeLinecap="round" />
       </g>
     );
   }
 
-  if (type === 'rough')
-    return <ellipse cx={cx} cy={cy + oy} rx={10} ry={6} fill="#33691e" opacity={0.65} />;
+  if (type === 'water') {
+    return (
+      <g transform={`translate(${hx},${hy}) scale(${S})`}>
+        {/* Irregular pond — 8 bezier segments with one peninsula */}
+        <path
+          d="M 0,-56 C 30,-68 66,-56 76,-34 C 86,-12 74,8 56,4 C 38,0 40,22 50,42 C 60,62 48,74 22,70 C -4,66 -22,44 -28,18 C -34,-8 -22,-30 -36,-50 C -50,-70 -28,-80 -8,-66 C -2,-62 -2,-58 0,-56 Z"
+          fill={`url(#wg-${holeNum})`} />
+        {/* Shore highlight */}
+        <path d="M 2,-53 C 28,-65 64,-53 74,-32" fill="none" stroke="rgba(100,180,255,0.35)" strokeWidth={6} strokeLinecap="round" />
+        {/* Water shimmer ripples */}
+        <path d="M -18,-18 Q -6,-26 8,-18 Q 22,-10 36,-18" fill="none" stroke="#90caf9" strokeWidth={4} strokeLinecap="round" opacity={0.55} />
+        <path d="M -26,6 Q -10,-2 6,6 Q 22,14 36,6" fill="none" stroke="#90caf9" strokeWidth={3.5} strokeLinecap="round" opacity={0.45} />
+        <path d="M -20,30 Q -6,22 8,30" fill="none" stroke="#90caf9" strokeWidth={3} strokeLinecap="round" opacity={0.35} />
+        {/* Glint */}
+        <ellipse cx={-22} cy={-34} rx={18} ry={7} fill="rgba(144,202,249,0.22)" transform="rotate(-20,-22,-34)" />
+      </g>
+    );
+  }
+
+  if (type === 'trees') {
+    return (
+      <g transform={`translate(${hx},${hy}) scale(${S})`}>
+        {/* Main canopy mass — organic blob, not circles */}
+        <path
+          d="M 0,-62 C 28,-78 62,-66 76,-42 C 90,-18 82,12 66,22 C 50,32 32,24 38,44 C 44,64 60,70 44,82 C 28,94 4,86 -14,72 C -32,58 -38,30 -50,14 C -62,-2 -64,-26 -50,-44 C -36,-62 -14,-64 0,-62 Z"
+          fill="#1b5e20" />
+        {/* Secondary lighter lobe overlapping on upper-right */}
+        <path
+          d="M 20,-54 C 46,-66 70,-56 78,-34 C 86,-12 74,8 58,12 C 42,16 28,4 32,-16 C 36,-36 22,-48 20,-54 Z"
+          fill="#2e7d32" />
+        {/* Highlight patch — canopy tops catching light */}
+        <path d="M -14,-44 C -2,-58 20,-52 26,-36 C 32,-20 20,-8 6,-12 C -8,-16 -12,-30 -14,-44 Z" fill="#388e3c" opacity={0.7} />
+        {/* Dark shadow pocket between masses */}
+        <path d="M 26,14 C 36,4 52,8 58,22" fill="none" stroke="#0a2e0a" strokeWidth={11} strokeLinecap="round" opacity={0.45} />
+        {/* Canopy gloss ellipses */}
+        <ellipse cx={-8} cy={-46} rx={24} ry={10} fill="#43a047" opacity={0.38} transform="rotate(-15,-8,-46)" />
+        <ellipse cx={44} cy={-28} rx={15} ry={7} fill="#43a047" opacity={0.3} transform="rotate(10,44,-28)" />
+      </g>
+    );
+  }
+
+  if (type === 'rough') {
+    return (
+      <g transform={`translate(${hx},${hy}) scale(${S})`}>
+        {/* Organic rough patch — irregular multi-lobe dark green */}
+        <path
+          d="M 0,-44 C 22,-56 50,-48 58,-28 C 66,-8 54,12 36,16 C 18,20 16,34 28,46 C 40,58 28,66 8,60 C -12,54 -24,30 -28,8 C -32,-14 -20,-32 -32,-48 C -44,-64 -24,-70 -8,-58 C -2,-54 -2,-48 0,-44 Z"
+          fill="#33691e" opacity={0.85} />
+        {/* Lighter texture streak */}
+        <path d="M -4,-40 C 16,-52 44,-44 52,-24 C 60,-4 50,12 34,14" fill="none" stroke="#558b2f" strokeWidth={7} strokeLinecap="round" opacity={0.45} />
+      </g>
+    );
+  }
 
   if (type === 'out-of-bounds')
     return (
       <g>
-        <rect x={cx - 11} y={cy + oy - 8} width={22} height={16} rx={3}
-          fill="#b71c1c" opacity={0.88} />
-        <text x={cx} y={cy + oy + 4} fontSize={6} fill="white"
+        <rect x={hx - 12} y={hy - 9} width={24} height={18} rx={3}
+          fill="#b71c1c" opacity={0.92} />
+        <text x={hx} y={hy + 5} fontSize={6} fill="white"
           textAnchor="middle" fontWeight="bold">OOB</text>
       </g>
     );
@@ -147,6 +197,21 @@ function HoleSVG({ hole, selectedPathId, pegIndex, playerColor, holeRelativeToPa
     <svg width={W} height={SVG_H} viewBox={`0 0 ${W} ${SVG_H}`}
       style={{ display: 'block', flexShrink: 0 }}>
 
+      <defs>
+        {/* Sand radial gradient — light centre → dark orange edge */}
+        <radialGradient id={`sg-${hole.number}`} cx="38%" cy="32%" r="68%" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#ffe082" />
+          <stop offset="55%" stopColor="#f9a825" />
+          <stop offset="100%" stopColor="#e65100" />
+        </radialGradient>
+        {/* Water linear gradient — sky blue → deep navy */}
+        <linearGradient id={`wg-${hole.number}`} x1="15%" y1="10%" x2="85%" y2="90%" gradientUnits="objectBoundingBox">
+          <stop offset="0%" stopColor="#1e88e5" />
+          <stop offset="45%" stopColor="#1565c0" />
+          <stop offset="100%" stopColor="#0a3880" />
+        </linearGradient>
+      </defs>
+
       {/* Rough + fairway layered thick strokes along the spine */}
       <path d={spineD} stroke="#1a4a0e" strokeWidth={SVG_H * 0.92} strokeLinecap="round" fill="none" />
       <path d={spineD} stroke="#2e7d32" strokeWidth={SVG_H * 0.70} strokeLinecap="round" fill="none" />
@@ -165,7 +230,7 @@ function HoleSVG({ hole, selectedPathId, pegIndex, playerColor, holeRelativeToPa
           if (!HAZARD_SET.has(ph.type)) return null;
           const [px, py] = pathPts[pi][phIdx];
           return <HazardShape key={`hz-${pi}-${phIdx}`}
-            type={ph.type as PegholeType} cx={px} cy={py} />;
+            type={ph.type as PegholeType} cx={px} cy={py} holeNum={hole.number} />;
         })
       )}
 
