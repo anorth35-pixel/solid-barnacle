@@ -57,22 +57,22 @@ export default function GameOverModal() {
     }, 0);
   }
 
-  // Stakes settlement
+  // Stakes settlement — per-stake dollar values
   function stakesSettlement() {
     if (!stakesState || !stakesConfig || !stakesConfig.enabled.length) return null;
-    const playerIds = players.map(p => p.id);
-    const uv = stakesConfig.unitValue ?? 1;
-    const fmt = (n: number) => `$${Math.abs(n * uv).toFixed(uv % 1 === 0 ? 0 : 2)}`;
+    const uvs = stakesConfig.unitValues ?? {};
+    const fmt = (n: number) => `$${Math.abs(n).toFixed(Math.abs(n) % 1 === 0 ? 0 : 2)}`;
 
-    // Tally units per player
-    const units: Record<string, number> = {};
-    players.forEach(p => { units[p.id] = 0; });
+    // Accumulate dollars won per player
+    const dollars: Record<string, number> = {};
+    players.forEach(p => { dollars[p.id] = 0; });
 
     if (stakesConfig.enabled.includes('skins') && stakesState.skins.length) {
+      const sv = uvs.skins ?? 1;
       let carryOver = 0;
       for (const skin of [...stakesState.skins].sort((a, b) => a.holeNumber - b.holeNumber)) {
         if (skin.winnerPlayerId && !skin.carried) {
-          units[skin.winnerPlayerId] = (units[skin.winnerPlayerId] ?? 0) + 1 + carryOver;
+          dollars[skin.winnerPlayerId] = (dollars[skin.winnerPlayerId] ?? 0) + sv * (1 + carryOver);
           carryOver = 0;
         } else {
           carryOver++;
@@ -80,23 +80,25 @@ export default function GameOverModal() {
       }
     }
 
-    // Nassau
     if (stakesConfig.enabled.includes('nassau') && stakesState.nassau) {
+      const nv = uvs.nassau ?? 1;
       const { front9WinnerId, back9WinnerId, overallWinnerId } = stakesState.nassau;
       [front9WinnerId, back9WinnerId, overallWinnerId].forEach(id => {
-        if (id) units[id] = (units[id] ?? 0) + 1;
+        if (id) dollars[id] = (dollars[id] ?? 0) + nv;
       });
     }
 
-    // Sandies / Barkies / Greenies — 1 unit each from each other player
-    const specialBets = [
-      ...(stakesConfig.enabled.includes('sandies') ? (stakesState.sandies ?? []) : []),
-      ...(stakesConfig.enabled.includes('barkies') ? (stakesState.barkies ?? []) : []),
-      ...(stakesConfig.enabled.includes('greenies') ? (stakesState.greenies ?? []) : []),
-    ].filter(b => b.achieved);
-
-    for (const bet of specialBets) {
-      units[bet.playerId] = (units[bet.playerId] ?? 0) + 1;
+    const betDefs: { key: 'sandies' | 'barkies' | 'greenies'; list: typeof stakesState.sandies }[] = [
+      { key: 'sandies',  list: stakesState.sandies ?? [] },
+      { key: 'barkies',  list: stakesState.barkies ?? [] },
+      { key: 'greenies', list: stakesState.greenies ?? [] },
+    ];
+    for (const { key, list } of betDefs) {
+      if (!stakesConfig.enabled.includes(key)) continue;
+      const bv = uvs[key] ?? 1;
+      for (const bet of list.filter(b => b.achieved)) {
+        dollars[bet.playerId] = (dollars[bet.playerId] ?? 0) + bv;
+      }
     }
 
     return (
@@ -104,18 +106,13 @@ export default function GameOverModal() {
         <h3 className={styles.stakesTitle}>Stakes Settlement</h3>
         <div className={styles.stakesGrid}>
           {players.map((p, i) => {
-            const net = units[p.id] ?? 0;
+            const net = dollars[p.id] ?? 0;
             return (
               <div key={p.id} className={styles.stakeEntry}>
                 <span style={{ color: PLAYER_COLORS[i] }} className={styles.stakeName}>{p.name}</span>
                 <span className={net > 0 ? styles.stakePos : net < 0 ? styles.stakeNeg : ''}>
                   {net > 0 ? `+${fmt(net)}` : net < 0 ? `-${fmt(net)}` : 'even'}
                 </span>
-                {uv !== 1 && (
-                  <span className={styles.stakeUnits}>
-                    {net > 0 ? `+${net}` : net} unit{Math.abs(net) !== 1 ? 's' : ''}
-                  </span>
-                )}
               </div>
             );
           })}

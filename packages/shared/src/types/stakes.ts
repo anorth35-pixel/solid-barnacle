@@ -2,8 +2,8 @@ export type StakeType = 'skins' | 'nassau' | 'sandies' | 'barkies' | 'greenies';
 
 export interface StakesConfig {
   enabled: StakeType[];
-  /** Unit value per stake (e.g. $1 or 1 point) */
-  unitValue: number;
+  /** Dollar value per unit, keyed by stake type */
+  unitValues: Partial<Record<StakeType, number>>;
 }
 
 export interface SkinEntry {

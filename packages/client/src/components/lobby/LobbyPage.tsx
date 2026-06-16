@@ -27,7 +27,9 @@ export default function LobbyPage() {
   const [enabledStakes, setEnabledStakes] = useState<StakeType[]>([]);
   const [boardPlayerCount, setBoardPlayerCount] = useState<2 | 3>(2);
   const [boardPlayerNames, setBoardPlayerNames] = useState(['', '']);
-  const [stakeValue, setStakeValue] = useState<number>(1);
+  const [stakeValues, setStakeValues] = useState<Partial<Record<StakeType, number>>>({
+    skins: 1, nassau: 1, sandies: 1, barkies: 1, greenies: 1,
+  });
 
   function toggleStake(id: StakeType) {
     setEnabledStakes((prev) =>
@@ -36,9 +38,16 @@ export default function LobbyPage() {
   }
 
   function stakesConfig() {
-    return enabledStakes.length > 0
-      ? { enabled: enabledStakes, unitValue: Math.max(0.25, stakeValue) }
-      : undefined;
+    if (enabledStakes.length === 0) return undefined;
+    const unitValues: Partial<Record<StakeType, number>> = {};
+    for (const s of enabledStakes) {
+      unitValues[s] = Math.max(0.25, stakeValues[s] ?? 1);
+    }
+    return { enabled: enabledStakes, unitValues };
+  }
+
+  function setStakeValue(id: StakeType, val: number) {
+    setStakeValues(prev => ({ ...prev, [id]: Math.max(0.25, val) }));
   }
   const navigate = useNavigate();
   const { setRoom, setMySeat } = useGameStore();
@@ -178,21 +187,19 @@ export default function LobbyPage() {
                     />
                     <span className={styles.stakeName}>{s.label}</span>
                     <span className={styles.stakeDesc}>{s.desc}</span>
+                    {enabledStakes.includes(s.id) && (
+                      <input
+                        type="number"
+                        min="0.25"
+                        step="0.25"
+                        value={stakeValues[s.id] ?? 1}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => { e.stopPropagation(); setStakeValue(s.id, parseFloat(e.target.value) || 0.25); }}
+                        className={styles.stakeValueInput}
+                      />
+                    )}
                   </label>
                 ))}
-                {enabledStakes.length > 0 && (
-                  <div className={styles.stakeValueRow}>
-                    <label className={styles.stakeValueLabel}>$ per unit</label>
-                    <input
-                      type="number"
-                      min="0.25"
-                      step="0.25"
-                      value={stakeValue}
-                      onChange={(e) => setStakeValue(Math.max(0.25, parseFloat(e.target.value) || 0.25))}
-                      className={styles.stakeValueInput}
-                    />
-                  </div>
-                )}
               </div>
 
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleVsAI}
@@ -233,21 +240,19 @@ export default function LobbyPage() {
                     />
                     <span className={styles.stakeName}>{s.label}</span>
                     <span className={styles.stakeDesc}>{s.desc}</span>
+                    {enabledStakes.includes(s.id) && (
+                      <input
+                        type="number"
+                        min="0.25"
+                        step="0.25"
+                        value={stakeValues[s.id] ?? 1}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => { e.stopPropagation(); setStakeValue(s.id, parseFloat(e.target.value) || 0.25); }}
+                        className={styles.stakeValueInput}
+                      />
+                    )}
                   </label>
                 ))}
-                {enabledStakes.length > 0 && (
-                  <div className={styles.stakeValueRow}>
-                    <label className={styles.stakeValueLabel}>$ per unit</label>
-                    <input
-                      type="number"
-                      min="0.25"
-                      step="0.25"
-                      value={stakeValue}
-                      onChange={(e) => setStakeValue(Math.max(0.25, parseFloat(e.target.value) || 0.25))}
-                      className={styles.stakeValueInput}
-                    />
-                  </div>
-                )}
               </div>
 
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleCreate}
@@ -301,16 +306,19 @@ export default function LobbyPage() {
                     <input type="checkbox" checked={enabledStakes.includes(s.id)} onChange={() => toggleStake(s.id)} />
                     <span className={styles.stakeName}>{s.label}</span>
                     <span className={styles.stakeDesc}>{s.desc}</span>
+                    {enabledStakes.includes(s.id) && (
+                      <input
+                        type="number"
+                        min="0.25"
+                        step="0.25"
+                        value={stakeValues[s.id] ?? 1}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => { e.stopPropagation(); setStakeValue(s.id, parseFloat(e.target.value) || 0.25); }}
+                        className={styles.stakeValueInput}
+                      />
+                    )}
                   </label>
                 ))}
-                {enabledStakes.length > 0 && (
-                  <div className={styles.stakeValueRow}>
-                    <label className={styles.stakeValueLabel}>$ per unit</label>
-                    <input type="number" min="0.25" step="0.25" value={stakeValue}
-                      onChange={e => setStakeValue(Math.max(0.25, parseFloat(e.target.value) || 0.25))}
-                      className={styles.stakeValueInput} />
-                  </div>
-                )}
               </div>
 
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleBoardOnly}

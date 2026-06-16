@@ -112,7 +112,11 @@
   flex-direction: row !important;
   font-size: 0.82rem;
   cursor: pointer;
-  padding: 2px 0;
+  padding: 3px 0;
+}
+
+.stakeRow .stakeDesc {
+  flex: 1;
 }
 
 .stakeName {
@@ -127,25 +131,10 @@
   opacity: 0.8;
 }
 
-.stakeValueRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0 2px;
-  border-top: 1px solid rgba(0,0,0,0.1);
-  margin-top: 4px;
-}
-
-.stakeValueLabel {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--green-dark);
-  white-space: nowrap;
-}
-
 .stakeValueInput {
-  width: 80px !important;
-  padding: 5px 8px;
-  font-size: 0.9rem;
+  width: 62px !important;
+  padding: 3px 6px;
+  font-size: 0.82rem;
   text-align: right;
+  flex-shrink: 0;
 }
