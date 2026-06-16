@@ -11,6 +11,8 @@ import { RECONNECT_TIMEOUT_MS } from '../config.js';
 
 const activeGames = new Map<string, ServerGame>();
 const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// Keyed by player socket id — resolved when client emits game:declare-score
+const declarationResolvers = new Map<string, (points: number) => void>();
 
 export function registerSocketHandlers(io: Server, socket: Socket): void {
 
@@ -223,6 +225,11 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     io.to(room.code).emit('game:muggins-closed', {});
   });
 
+  socket.on('game:declare-score', ({ declaredPoints }: { declaredPoints: number }) => {
+    const resolver = declarationResolvers.get(socket.id);
+    if (resolver) resolver(Math.max(0, Math.floor(declaredPoints)));
+  });
+
   // ── Disconnect ─────────────────────────────────────────────────────────────
 
   socket.on('disconnect', () => handleDisconnect(io, socket));
@@ -304,6 +311,7 @@ function handleDisconnect(io: Server, socket: Socket): void {
 
 async function runHandScoringSequence(io: Server, roomCode: string, game: ServerGame): Promise<void> {
   const pc = game.state.config.playerCount;
+  const manual = game.state.config.manualScoring;
   const order: PlayerSeat[] = [];
   for (let i = 1; i < pc; i++) {
     order.push(((game.state.dealerSeat + i) % pc) as PlayerSeat);
@@ -312,7 +320,25 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
 
   for (const seat of order) {
     await delay(900);
-    const bd = game.scoreHand(seat);
+
+    let bd;
+    if (manual && game.state.players[seat].type === 'human') {
+      const actual = game.computeHandBreakdown(seat);
+      const player = game.state.players[seat];
+      // Send the hand + starter to only this player so they can count it themselves
+      io.to(player.id).emit('game:score-declaration-needed', {
+        seat,
+        phase: 'hand',
+        hand: player.hand,
+        starterCard: game.state.starterCard,
+        isCrib: false,
+      });
+      const declared = await waitForDeclaration(player.id, 60_000) ?? actual.total;
+      bd = game.awardHandBreakdown(seat, actual, declared);
+    } else {
+      bd = game.scoreHand(seat);
+    }
+
     const movements = game.state.pendingPegMovements.splice(0);
     io.to(roomCode).emit('game:hand-score', {
       seat,
@@ -329,7 +355,6 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
       return;
     }
 
-    // Muggins window (only opens if missedItems were set — future enhancement)
     if (game.state.config.mugginsEnabled) {
       const missed = bd.missedItems ?? [];
       if (missed.length > 0) {
@@ -350,7 +375,24 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
 
   await delay(900);
   game.state.phase = 'crib-scoring';
-  const cribBd = game.scoreCrib();
+
+  let cribBd;
+  const dealer = game.state.players[game.state.dealerSeat];
+  if (manual && dealer.type === 'human') {
+    const actual = game.computeCribBreakdown();
+    io.to(dealer.id).emit('game:score-declaration-needed', {
+      seat: game.state.dealerSeat,
+      phase: 'crib',
+      hand: game.state.crib,
+      starterCard: game.state.starterCard,
+      isCrib: true,
+    });
+    const declared = await waitForDeclaration(dealer.id, 60_000) ?? actual.total;
+    cribBd = game.awardCribBreakdown(actual, declared);
+  } else {
+    cribBd = game.scoreCrib();
+  }
+
   const cribMovements = game.state.pendingPegMovements.splice(0);
   io.to(roomCode).emit('game:crib-score', {
     seat: game.state.dealerSeat,
@@ -358,6 +400,23 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
     pegMovements: cribMovements,
     golfScores: game.state.golfScores,
   });
+
+  if (game.state.config.mugginsEnabled) {
+    const missed = cribBd.missedItems ?? [];
+    if (missed.length > 0) {
+      const muggins = game.openMugginsWindow(cribBd.playerId, missed);
+      io.to(roomCode).emit('game:muggins-window', {
+        scoringPlayerId: cribBd.playerId,
+        missedItems: missed,
+        windowCloseAt: muggins.windowCloseAt,
+      });
+      await delay(game.state.config.mugginsWindowMs ?? 15_000);
+      if (!game.state.muggins?.claimed) {
+        game.closeMuggins();
+        io.to(roomCode).emit('game:muggins-closed', {});
+      }
+    }
+  }
 
   if ((game.state.phase as string) === 'game-over') {
     io.to(roomCode).emit('game:over', {
@@ -391,6 +450,20 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
   }
 
   triggerAIActions(io, roomCode, game);
+}
+
+function waitForDeclaration(playerId: string, timeoutMs: number): Promise<number | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      declarationResolvers.delete(playerId);
+      resolve(null);
+    }, timeoutMs);
+    declarationResolvers.set(playerId, (points) => {
+      clearTimeout(timer);
+      declarationResolvers.delete(playerId);
+      resolve(points);
+    });
+  });
 }
 
 function triggerAIActions(io: Server, roomCode: string, game: ServerGame): void {

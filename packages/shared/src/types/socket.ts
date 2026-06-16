@@ -14,6 +14,7 @@ export interface C2S_GameDiscard { cardIds: string[] }
 export interface C2S_GameCut { position: number }
 export interface C2S_GamePeg { cardId: string }
 export interface C2S_GameMuggins { claimedItems: ScoreItem[] }
+export interface C2S_GameDeclareScore { declaredPoints: number }
 export interface C2S_ChatMessage { text: string }
 
 // ── Server → Client ──────────────────────────────────────────────────────────
@@ -48,6 +49,13 @@ export interface S2C_CountReset { lastSeat: PlayerSeat; lastCardEvent?: ScoreEve
 
 export interface S2C_HandScore { seat: PlayerSeat; breakdown: ScoreBreakdown; pegMovements: PegMovement[] }
 export interface S2C_CribScore { seat: PlayerSeat; breakdown: ScoreBreakdown; pegMovements: PegMovement[] }
+export interface S2C_ScoreDeclarationNeeded {
+  seat: PlayerSeat;
+  phase: 'hand' | 'crib';
+  hand: Card[];
+  starterCard: Card;
+  isCrib: boolean;
+}
 
 export interface S2C_MugginsWindow { scoringPlayerId: string; missedItems: ScoreItem[]; windowCloseAt: number }
 export interface S2C_MugginsClaimed { claimerSeat: PlayerSeat; items: ScoreItem[]; pegMovements: PegMovement[] }

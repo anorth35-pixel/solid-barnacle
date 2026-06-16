@@ -25,6 +25,7 @@ export interface GameConfig {
   mugginsEnabled: boolean;
   mugginsWindowMs: number;
   aiDifficulty?: AIDifficulty;
+  manualScoring: boolean;
 }
 
 export interface PeggingState {

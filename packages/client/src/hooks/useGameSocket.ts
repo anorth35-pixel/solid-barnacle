@@ -111,7 +111,12 @@ export function useGameSocket() {
       }
     });
 
+    socket.on('game:score-declaration-needed', (data: any) => {
+      store().setPendingDeclaration(data);
+    });
+
     socket.on('game:hand-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
+      store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
       store().patchGameState({
         phase: 'hand-scoring',
@@ -125,6 +130,7 @@ export function useGameSocket() {
     });
 
     socket.on('game:crib-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
+      store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
       store().patchGameState({
         phase: 'crib-scoring',
@@ -216,6 +222,7 @@ export function useGameSocket() {
       socket.off('game:discard-done');
       socket.off('game:card-played');
       socket.off('game:go-called');
+      socket.off('game:score-declaration-needed');
       socket.off('game:hand-score');
       socket.off('game:crib-score');
       socket.off('game:muggins-window');

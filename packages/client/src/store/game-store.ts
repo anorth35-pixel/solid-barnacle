@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import type { GameState, PlayerSeat, RoomSummary, ScoreBreakdown, PegMovement } from '@cribbgolf/shared';
 import type { Card, PlayerGolfScore } from '@cribbgolf/shared';
 
+export interface PendingDeclaration {
+  seat: PlayerSeat;
+  phase: 'hand' | 'crib';
+  hand: Card[];
+  starterCard: Card;
+  isCrib: boolean;
+}
+
 export interface Toast {
   id: string;
   type: 'hazard' | 'hole-complete' | 'info';
@@ -22,6 +30,7 @@ export interface GameStore {
   lastBreakdowns: ScoreBreakdown[];
   lastPegMovements: PegMovement[];
 
+  pendingDeclaration: PendingDeclaration | null;
   mugginsWindow: { missedItems: any[]; windowCloseAt: number; scoringPlayerId: string } | null;
   disconnectedSeats: number[];
   toasts: Toast[];
@@ -36,6 +45,7 @@ export interface GameStore {
   patchGameState: (patch: Partial<GameState>) => void;
   addBreakdown: (bd: ScoreBreakdown) => void;
   addPegMovements: (movements: PegMovement[]) => void;
+  setPendingDeclaration: (d: PendingDeclaration | null) => void;
   openMuggins: (data: { missedItems: any[]; windowCloseAt: number; scoringPlayerId: string }) => void;
   closeMuggins: () => void;
   setDisconnectedSeats: (seats: number[]) => void;
@@ -50,6 +60,7 @@ const initialState = {
   mySeat: null,
   myHand: [],
   pendingPathChoice: null,
+  pendingDeclaration: null,
   room: null,
   roomCode: null,
   gameState: null,
@@ -103,6 +114,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   addPegMovements: (movements) => set({ lastPegMovements: movements }),
 
+  setPendingDeclaration: (d) => set({ pendingDeclaration: d }),
   openMuggins: (data) => set({ mugginsWindow: data }),
   closeMuggins: () => set({ mugginsWindow: null }),
 

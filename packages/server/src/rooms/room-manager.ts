@@ -60,6 +60,7 @@ export function createRoom(
     mugginsEnabled: configOverride.mugginsEnabled ?? true,
     mugginsWindowMs: configOverride.mugginsWindowMs ?? 15_000,
     aiDifficulty: configOverride.aiDifficulty,
+    manualScoring: configOverride.manualScoring ?? false,
   };
 
   const room: Room = {

@@ -7,13 +7,14 @@ import PeggingPhase from '../phases/PeggingPhase.js';
 import ScoringPhase from '../phases/ScoringPhase.js';
 import StarterCard from '../cards/StarterCard.js';
 import MugginsOverlay from '../scoring/MugginsOverlay.js';
+import ScoreDeclarationModal from '../scoring/ScoreDeclarationModal.js';
 import GameOverModal from '../scoring/GameOverModal.js';
 import ToastStack from '../ui/ToastStack.js';
 import DisconnectedBanner from '../ui/DisconnectedBanner.js';
 import styles from './GamePage.module.css';
 
 export default function GamePage() {
-  const { gameState, mySeat, mugginsWindow, lastBreakdowns, pendingPathChoice, setPendingPathChoice } = useGameStore();
+  const { gameState, mySeat, mugginsWindow, lastBreakdowns, pendingPathChoice, setPendingPathChoice, pendingDeclaration } = useGameStore();
 
   if (!gameState) {
     return <div className={styles.loading}>Connecting to game…</div>;
@@ -83,6 +84,7 @@ export default function GamePage() {
       </div>
 
       {mugginsWindow && <MugginsOverlay />}
+      {pendingDeclaration && <ScoreDeclarationModal declaration={pendingDeclaration} />}
       {phase === 'game-over' && <GameOverModal />}
       {pendingPathChoice && (
         <PathChoiceDialog

@@ -13,6 +13,7 @@ export default function LobbyPage() {
   const [code, setCode] = useState('');
   const [playerCount, setPlayerCount] = useState<2 | 3>(2);
   const [muggins, setMuggins] = useState(true);
+  const [manualScoring, setManualScoring] = useState(false);
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [aiCount, setAICount] = useState<1 | 2>(1);
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function LobbyPage() {
 
   function handleCreate() {
     if (!name.trim()) return;
-    const config: Partial<GameConfig> = { playerCount, mugginsEnabled: muggins, mode: 'remote' };
+    const config: Partial<GameConfig> = { playerCount, mugginsEnabled: muggins, manualScoring, mode: 'remote' };
     getSocket().emit('room:create', { playerName: name.trim(), config });
     getSocket().once('room:created', ({ roomCode: rc, room: r }: any) => {
       setRoom(r, rc);
@@ -39,6 +40,7 @@ export default function LobbyPage() {
     const config: Partial<GameConfig> = {
       playerCount: totalPlayers,
       mugginsEnabled: muggins,
+      manualScoring,
       mode: 'vs-ai',
       aiDifficulty,
     };
@@ -113,6 +115,10 @@ export default function LobbyPage() {
                 <input type="checkbox" checked={muggins} onChange={(e) => setMuggins(e.target.checked)} />
                 Muggins rule
               </label>
+              <label className={styles.checkRow}>
+                <input type="checkbox" checked={manualScoring} onChange={(e) => setManualScoring(e.target.checked)} />
+                Manual point counting
+              </label>
 
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleVsAI}
                 disabled={!name.trim()}>
@@ -135,6 +141,10 @@ export default function LobbyPage() {
               <label className={styles.checkRow}>
                 <input type="checkbox" checked={muggins} onChange={(e) => setMuggins(e.target.checked)} />
                 Muggins rule
+              </label>
+              <label className={styles.checkRow}>
+                <input type="checkbox" checked={manualScoring} onChange={(e) => setManualScoring(e.target.checked)} />
+                Manual point counting
               </label>
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleCreate}
                 disabled={!name.trim()}>

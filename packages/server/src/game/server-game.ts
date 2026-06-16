@@ -277,11 +277,41 @@ export class ServerGame {
     return bd;
   }
 
+  // Compute breakdown without awarding — used for manual scoring mode
+  computeHandBreakdown(seat: PlayerSeat): ScoreBreakdown {
+    const player = this.state.players[seat];
+    return scoreHand(player.id, player.hand, this.state.starterCard!, false);
+  }
+
+  // Award a pre-computed breakdown, optionally capping at a declared amount.
+  // Returns the final breakdown (with total = what was actually awarded).
+  awardHandBreakdown(seat: PlayerSeat, actual: ScoreBreakdown, declaredPoints?: number): ScoreBreakdown {
+    const awarded = declaredPoints !== undefined
+      ? Math.min(Math.max(0, declaredPoints), actual.total)
+      : actual.total;
+    const finalBd: ScoreBreakdown = {
+      ...actual,
+      total: awarded,
+      missedItems: awarded < actual.total ? actual.items : (actual.missedItems ?? []),
+    };
+    this.awardPointsFromBreakdown(seat, finalBd);
+    return finalBd;
+  }
+
   scoreCrib(): ScoreBreakdown {
     const dealer = this.state.players[this.state.dealerSeat];
     const bd = scoreHand(dealer.id, this.state.crib, this.state.starterCard!, true);
     this.awardPointsFromBreakdown(this.state.dealerSeat, bd);
     return bd;
+  }
+
+  computeCribBreakdown(): ScoreBreakdown {
+    const dealer = this.state.players[this.state.dealerSeat];
+    return scoreHand(dealer.id, this.state.crib, this.state.starterCard!, true);
+  }
+
+  awardCribBreakdown(actual: ScoreBreakdown, declaredPoints?: number): ScoreBreakdown {
+    return this.awardHandBreakdown(this.state.dealerSeat, actual, declaredPoints);
   }
 
   advanceRound(): void {
