@@ -57,7 +57,7 @@ export function advancePeg(
     remaining--;
     score = { ...score, currentHoleStrokes: score.currentHoleStrokes + 1 };
 
-    if (isHazard(nextPeghole) && !triggeredThisHole.has(nextIndex)) {
+    if (isHazard(nextPeghole) && remaining === 0 && !triggeredThisHole.has(nextIndex)) {
       triggeredThisHole.add(nextIndex);
       const result = applyHazard(
         nextPeghole,
