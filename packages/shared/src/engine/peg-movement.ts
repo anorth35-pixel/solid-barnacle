@@ -40,6 +40,7 @@ export function advancePeg(
   let totalPenaltyThisHole = 0;
   let hazardTypesThisHole: PegholeType[] = [];
   let holeJustStarted = false; // whether we crossed into a new hole this action
+  let triggeredThisHole = new Set<number>(); // pegholes that already fired a hazard this advancePeg call
 
   while (remaining > 0 && !score.isFinished) {
     const hole = holes[score.currentHole - 1];
@@ -56,7 +57,8 @@ export function advancePeg(
     remaining--;
     score = { ...score, currentHoleStrokes: score.currentHoleStrokes + 1 };
 
-    if (isHazard(nextPeghole)) {
+    if (isHazard(nextPeghole) && !triggeredThisHole.has(nextIndex)) {
+      triggeredThisHole.add(nextIndex);
       const result = applyHazard(
         nextPeghole,
         nextIndex,
@@ -156,6 +158,7 @@ export function advancePeg(
       // Reset per-hole tracking for the next hole
       totalPenaltyThisHole = 0;
       hazardTypesThisHole = [];
+      triggeredThisHole = new Set<number>();
       holeJustStarted = true;
     }
   }

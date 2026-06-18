@@ -425,6 +425,9 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
       breakdown: bd,
       pegMovements: movements,
       golfScores: game.state.golfScores,
+      hand: game.state.players[seat].hand,
+      starterCard: game.state.starterCard,
+      isCrib: false,
     });
 
     if ((game.state.phase as string) === 'game-over') {
@@ -481,6 +484,9 @@ async function runHandScoringSequence(io: Server, roomCode: string, game: Server
     breakdown: cribBd,
     pegMovements: cribMovements,
     golfScores: game.state.golfScores,
+    hand: game.state.crib,
+    starterCard: game.state.starterCard,
+    isCrib: true,
   });
 
   if (game.state.config.mugginsEnabled) {

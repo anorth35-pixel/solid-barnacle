@@ -1,18 +1,22 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ScoreBreakdown } from '@cribbgolf/shared';
 import { useGameStore } from '../../store/game-store.js';
+import CardComponent from '../cards/CardComponent.js';
 import styles from './ScoringPhase.module.css';
 
 const PLAYER_COLORS = ['#1565c0', '#c62828', '#2e7d32'];
-
-const ITEM_DELAY_MS = 1100; // time between each revealed item
 
 interface Props {
   breakdowns: ScoreBreakdown[];
 }
 
 export default function ScoringPhase({ breakdowns }: Props) {
-  const { gameState, currentScoringBreakdown, commitPendingGolfScores, pendingGolfScores } = useGameStore();
+  const {
+    gameState, mySeat,
+    currentScoringBreakdown, currentScoringHand,
+    commitPendingGolfScores, pendingGolfScores,
+    setPendingPathChoice,
+  } = useGameStore();
 
   const breakdown = currentScoringBreakdown ?? breakdowns[breakdowns.length - 1];
   const items = breakdown?.items ?? [];
@@ -27,35 +31,44 @@ export default function ScoringPhase({ breakdowns }: Props) {
   // Reset when a new breakdown arrives
   const breakdownKey = `${breakdown?.playerId ?? ''}-${items.length}`;
   const prevKeyRef = useRef(breakdownKey);
-
   if (prevKeyRef.current !== breakdownKey) {
     prevKeyRef.current = breakdownKey;
     setRevealedCount(0);
     setPegCommitted(false);
   }
 
-  // Auto-reveal items one at a time; stop when all shown (button takes over)
-  useEffect(() => {
-    if (!breakdown || revealedCount >= items.length) return;
-    const t = setTimeout(() => setRevealedCount((c) => c + 1), ITEM_DELAY_MS);
-    return () => clearTimeout(t);
-  }, [revealedCount, items.length, breakdown]);
+  const allRevealed = revealedCount >= items.length;
+  const isZeroScore = items.length === 0;
 
-  // Tap the feed area to skip item reveal (does NOT commit the peg)
+  // After all items shown, open path choice for MY seat if needed (before Move Peg)
+  const myPendingPathHole = (mySeat !== null && pendingGolfScores)
+    ? (pendingGolfScores[mySeat] as any)?.pendingPathChoiceHole ?? null
+    : null;
+
+  useEffect(() => {
+    if (!allRevealed || pegCommitted || myPendingPathHole == null) return;
+    setPendingPathChoice({ holeNumber: myPendingPathHole });
+  }, [allRevealed, pegCommitted, myPendingPathHole, setPendingPathChoice]);
+
+  // Reveal next item on button click
+  const handleNext = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (revealedCount < items.length) setRevealedCount((c) => c + 1);
+  }, [revealedCount, items.length]);
+
+  // Tap feed area to reveal ALL remaining items at once
   const handleSkip = useCallback(() => {
     if (revealedCount < items.length) setRevealedCount(items.length);
   }, [revealedCount, items.length]);
 
-  // Explicit button to move peg and continue
-  const handleContinue = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation(); // don't also trigger handleSkip
+  // Commit peg movement
+  const handleMovePeg = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     commitPendingGolfScores();
     setPegCommitted(true);
   }, [commitPendingGolfScores]);
 
   const runningTotal = items.slice(0, revealedCount).reduce((s, i) => s + i.points, 0);
-  const allRevealed = revealedCount >= items.length;
-  const isZeroScore = items.length === 0;
 
   if (!breakdown) {
     return (
@@ -66,13 +79,16 @@ export default function ScoringPhase({ breakdowns }: Props) {
   }
 
   const color = PLAYER_COLORS[playerSeat] ?? '#ccc';
+  const handCards = currentScoringHand?.handCards ?? [];
+  const starterCard = currentScoringHand?.starterCard ?? gameState?.starterCard ?? null;
+  const isCrib = currentScoringHand?.isCrib ?? false;
 
   return (
     <div className={styles.wrapper} onClick={handleSkip} role="presentation">
       {/* Header */}
       <div className={styles.header}>
         <span className={styles.phaseBadge}>
-          {gameState?.phase === 'crib-scoring' ? 'Crib' : 'Hand'}
+          {isCrib ? 'Crib' : 'Hand'}
         </span>
         <span className={styles.playerName} style={{ color }}>
           {player?.name ?? 'Player'}
@@ -83,6 +99,21 @@ export default function ScoringPhase({ breakdowns }: Props) {
             : ''}
         </span>
       </div>
+
+      {/* Hand cards display */}
+      {handCards.length > 0 && (
+        <div className={styles.handDisplay} onClick={(e) => e.stopPropagation()}>
+          {handCards.map((c) => (
+            <CardComponent key={c.id} card={c} small />
+          ))}
+          {starterCard && (
+            <>
+              <span className={styles.starterSep}>|</span>
+              <CardComponent card={starterCard} small />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Reveal feed */}
       <div className={styles.feed}>
@@ -100,7 +131,7 @@ export default function ScoringPhase({ breakdowns }: Props) {
         ))}
       </div>
 
-      {/* Footer: skip hint → continue button → peg status */}
+      {/* Action buttons */}
       <div className={styles.footer}>
         {pegCommitted ? (
           pendingGolfScores === null ? (
@@ -109,11 +140,17 @@ export default function ScoringPhase({ breakdowns }: Props) {
             <span className={styles.statusMoving}>⛳ Moving peg…</span>
           )
         ) : allRevealed ? (
-          <button className={styles.continueBtn} onClick={handleContinue}>
-            Move Peg ⛳
-          </button>
+          myPendingPathHole != null ? (
+            <span className={styles.pathHint}>Choose your path for hole {myPendingPathHole} →</span>
+          ) : (
+            <button className={styles.continueBtn} onClick={handleMovePeg}>
+              Move Peg ⛳
+            </button>
+          )
         ) : (
-          <span className={styles.hint}>tap to skip ahead</span>
+          <button className={styles.nextBtn} onClick={handleNext}>
+            Next →
+          </button>
         )}
       </div>
     </div>

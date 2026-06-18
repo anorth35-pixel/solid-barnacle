@@ -13,8 +13,8 @@ const CUP_MARGIN = 22;    // right margin for cup centre
 const PPP = 20;            // pixels per peghole (drives hole width)
 const HOLE_EXTRA = 56;     // extra pixels for tee/cup areas
 
-// Path colours: A=sky-blue, B=amber, C=rose
-const PATH_COLORS = ['#81d4fa', '#ffe082', '#f48fb1'];
+// Path colours: A=electric-cyan, B=bright-amber, C=deep-orange
+const PATH_COLORS = ['#00e5ff', '#ffd740', '#ff6e40'];
 
 const TYPE_COLOR: Record<string, string> = {
   tee: '#bcaaa4', fairway: '#66bb6a', rough: '#558b2f',
@@ -304,12 +304,14 @@ function HoleSVG({ hole, selectedPathId, pegIndex, playerColor, holeRelativeToPa
           if (ph.type === 'tee' || ph.type === 'cup') return null;
           const [px, py] = pathPts[pi][phIdx];
           const isSel = pi === selIdx;
+          const isHazard = HAZARD_SET.has(ph.type);
           return (
             <circle key={`ph-${pi}-${phIdx}`}
               cx={px} cy={py}
-              r={ph.type === 'green' ? 4.5 : 3}
+              r={ph.type === 'green' ? 4.5 : isHazard ? 5 : 3}
               fill={TYPE_COLOR[ph.type] ?? '#aaa'}
-              stroke="rgba(0,0,0,0.35)" strokeWidth={0.5}
+              stroke={isHazard ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)'}
+              strokeWidth={isHazard ? 1.8 : 0.5}
               opacity={isSel ? 0.95 : 0.3} />
           );
         })

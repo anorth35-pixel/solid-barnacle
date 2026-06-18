@@ -30,6 +30,7 @@ export interface GameStore {
   lastBreakdowns: ScoreBreakdown[];
   lastPegMovements: PegMovement[];
   currentScoringBreakdown: ScoreBreakdown | null;
+  currentScoringHand: { handCards: Card[]; starterCard: Card | null; isCrib: boolean } | null;
   pendingGolfScores: PlayerGolfScore[] | null;
 
   pendingDeclaration: PendingDeclaration | null;
@@ -48,6 +49,7 @@ export interface GameStore {
   addBreakdown: (bd: ScoreBreakdown) => void;
   addPegMovements: (movements: PegMovement[]) => void;
   setCurrentScoringBreakdown: (bd: ScoreBreakdown | null) => void;
+  setCurrentScoringHand: (hand: { handCards: Card[]; starterCard: Card | null; isCrib: boolean } | null) => void;
   setPendingGolfScores: (scores: PlayerGolfScore[] | null) => void;
   commitPendingGolfScores: () => void;
   setPendingDeclaration: (d: PendingDeclaration | null) => void;
@@ -72,6 +74,7 @@ const initialState = {
   lastBreakdowns: [],
   lastPegMovements: [],
   currentScoringBreakdown: null,
+  currentScoringHand: null,
   pendingGolfScores: null,
   mugginsWindow: null,
   disconnectedSeats: [],
@@ -122,6 +125,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   addPegMovements: (movements) => set({ lastPegMovements: movements }),
 
   setCurrentScoringBreakdown: (bd) => set({ currentScoringBreakdown: bd }),
+  setCurrentScoringHand: (hand) => set({ currentScoringHand: hand }),
 
   setPendingGolfScores: (scores) => set({ pendingGolfScores: scores }),
 

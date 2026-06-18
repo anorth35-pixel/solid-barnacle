@@ -20,6 +20,10 @@ export default function PeggingPhase() {
     (c) => !myPlayer?.playedCards.some((p) => p.id === c.id),
   );
 
+  const deadCards = (myPlayer?.playedCards ?? []).filter(
+    (c) => !pegging.playStack.some((s) => s.id === c.id),
+  );
+
   function playCard(card: Card) {
     if (!isMyTurn || !canPlayCard(card, pegging.runningCount)) return;
     getSocket().emit('game:peg', { cardId: card.id });
@@ -39,6 +43,17 @@ export default function PeggingPhase() {
         <span className={styles.countOf}> / 31</span>
       </div>
 
+      {deadCards.length > 0 && (
+        <div>
+          <p className={styles.deadLabel}>Played</p>
+          <div className={styles.deadPile}>
+            {deadCards.map((card) => (
+              <CardComponent key={card.id} card={card} small />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={styles.playStack}>
         <AnimatePresence>
           {pegging.playStack.map((card, i) => (
@@ -54,6 +69,12 @@ export default function PeggingPhase() {
           ))}
         </AnimatePresence>
       </div>
+
+      {isMyTurn && !canPlay && (
+        <button className="btn-secondary" onClick={callGo}>
+          Go (no playable card)
+        </button>
+      )}
 
       {isMyTurn && (
         <div className={styles.turnIndicator}>Your turn</div>
@@ -72,12 +93,6 @@ export default function PeggingPhase() {
           );
         })}
       </div>
-
-      {isMyTurn && !canPlay && (
-        <button className="btn-secondary" onClick={callGo}>
-          Go (no playable card)
-        </button>
-      )}
 
       {!isMyTurn && activePlayerSeat !== null && (
         <p className={styles.waiting}>

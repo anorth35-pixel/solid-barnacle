@@ -123,20 +123,22 @@ export function useGameSocket() {
       store().setPendingDeclaration(data);
     });
 
-    socket.on('game:hand-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
+    socket.on('game:hand-score', ({ seat, breakdown, pegMovements, golfScores, hand, starterCard, isCrib }: any) => {
       store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
       store().setCurrentScoringBreakdown(breakdown);
+      if (hand) store().setCurrentScoringHand({ handCards: hand, starterCard: starterCard ?? null, isCrib: false });
       // Hold back golfScores — ScoringPhase commits them after the reveal feed finishes
       if (golfScores) store().setPendingGolfScores(golfScores);
       store().patchGameState({ phase: 'hand-scoring' });
       if (pegMovements?.length) store().addPegMovements(pegMovements);
     });
 
-    socket.on('game:crib-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
+    socket.on('game:crib-score', ({ seat, breakdown, pegMovements, golfScores, hand, starterCard, isCrib }: any) => {
       store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
       store().setCurrentScoringBreakdown(breakdown);
+      if (hand) store().setCurrentScoringHand({ handCards: hand, starterCard: starterCard ?? null, isCrib: true });
       if (golfScores) store().setPendingGolfScores(golfScores);
       store().patchGameState({ phase: 'crib-scoring' });
       if (pegMovements?.length) store().addPegMovements(pegMovements);
@@ -158,7 +160,13 @@ export function useGameSocket() {
     });
 
     socket.on('game:path-chosen', ({ golfScores }: any) => {
-      store().patchGameState({ golfScores });
+      // During scoring reveal, path-chosen updates the held pendingGolfScores
+      // so ScoringPhase can detect the choice is done and show "Move Peg"
+      if (store().pendingGolfScores) {
+        store().setPendingGolfScores(golfScores);
+      } else {
+        store().patchGameState({ golfScores });
+      }
     });
 
     socket.on('game:points-awarded', ({ playerId, points, pegMovements, golfScores, dealerSeat }: any) => {

@@ -79,6 +79,47 @@
   justify-content: center;
 }
 
+/* ── Hand card display ── */
+.handDisplay {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.starterSep {
+  opacity: 0.35;
+  font-size: 1.1rem;
+  margin: 0 2px;
+}
+
+/* ── Buttons ── */
+.nextBtn {
+  padding: 7px 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  animation: popIn 0.18s ease-out both;
+}
+.nextBtn:hover { background: rgba(255, 255, 255, 0.15); }
+.nextBtn:active { transform: scale(0.96); }
+
+.pathHint {
+  font-size: 0.82rem;
+  color: #ffd740;
+  opacity: 0.85;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
 .continueBtn {
   padding: 8px 28px;
   border-radius: 20px;

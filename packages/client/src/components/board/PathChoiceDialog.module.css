@@ -41,9 +41,9 @@
 
 .pathCard {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
   border-radius: 12px;
   border: 2px solid transparent;
   cursor: pointer;
@@ -51,6 +51,41 @@
   transition: border-color 0.15s, transform 0.1s;
 }
 .pathCard:active { transform: scale(0.97); }
+
+.pathTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Peghole strip preview */
+.strip {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 4px 2px 2px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.hazardDot {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid rgba(255,255,255,0.4);
+}
+
+.pegDot {
+  width: 13px;
+  height: 13px;
+  transform: scale(1.15);
+}
 
 .pathA { background: rgba(76,175,80,0.15); border-color: rgba(76,175,80,0.4); }
 .pathA:hover { border-color: #4caf50; }
@@ -79,13 +114,13 @@
   font-weight: 700;
   color: #fff;
   font-size: 0.95rem;
-  min-width: 72px;
+  flex: 1;
 }
 
 .pathDesc {
-  flex: 1;
-  color: rgba(255,255,255,0.65);
-  font-size: 0.8rem;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.78rem;
+  margin: 0;
 }
 
 .hazardIcons {
