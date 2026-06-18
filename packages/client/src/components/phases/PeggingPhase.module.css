@@ -74,11 +74,28 @@
   text-align: center;
 }
 
+.deadPileRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.deadPileOwner {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  min-width: 48px;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .deadPile {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   opacity: 0.4;
   padding: 4px 8px;
 }

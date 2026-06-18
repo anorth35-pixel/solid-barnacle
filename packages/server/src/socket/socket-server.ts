@@ -290,18 +290,26 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     // Send full game state to the rejoining player
     const game = activeGames.get(room.code);
     if (game) {
-      socket.emit('game:phase-change', {
-        phase: game.state.phase,
-        state: sanitizeState(game.state),
-      });
-      // Send their private hand
+      // Sync new socket ID into game state so subsequent game actions resolve correctly
       const player = game.state.players.find((p) => p.seat === seat && p.type === 'human');
       if (player) {
+        const oldId = player.id;
+        player.id = socket.id;
+        // Move any pending declaration resolver to the new socket ID
+        const resolver = declarationResolvers.get(oldId);
+        if (resolver) {
+          declarationResolvers.delete(oldId);
+          declarationResolvers.set(socket.id, resolver);
+        }
         socket.emit('game:dealt', {
           yourHand: player.hand,
           dealerSeat: game.state.dealerSeat,
         });
       }
+      socket.emit('game:phase-change', {
+        phase: game.state.phase,
+        state: sanitizeState(game.state),
+      });
     }
     socket.emit('game:rejoined', { seat, roomCode: room.code });
   });
