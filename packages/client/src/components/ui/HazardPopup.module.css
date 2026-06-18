@@ -1,0 +1,99 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 20px;
+  border: 2px solid;
+  padding: 28px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.hazardEmoji {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.hazardName {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.diceRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.die {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.dicePlus {
+  opacity: 0.5;
+  font-size: 1.1rem;
+}
+
+.diceEq {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+  margin-left: 4px;
+}
+
+.outcome {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 4px 0 2px;
+}
+
+.penalty {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.dismissBtn {
+  margin-top: 12px;
+  padding: 8px 28px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dismissBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.dismissBtn:active {
+  transform: scale(0.96);
+}

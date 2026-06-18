@@ -11,6 +11,8 @@ import ScoreDeclarationModal from '../scoring/ScoreDeclarationModal.js';
 import BoardOnlyPhase from '../phases/BoardOnlyPhase.js';
 import GameOverModal from '../scoring/GameOverModal.js';
 import ToastStack from '../ui/ToastStack.js';
+import HazardPopup from '../ui/HazardPopup.js';
+import HoleCompletePopup from '../ui/HoleCompletePopup.js';
 import DisconnectedBanner from '../ui/DisconnectedBanner.js';
 import styles from './GamePage.module.css';
 
@@ -98,6 +100,8 @@ export default function GamePage() {
           hole={course.holes[pendingPathChoice.holeNumber - 1]}
         />
       )}
+      <HazardPopup />
+      <HoleCompletePopup />
       <ToastStack />
     </div>
   );

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { GameState, PlayerSeat, RoomSummary, ScoreBreakdown, PegMovement } from '@cribbgolf/shared';
 import type { Card, PlayerGolfScore } from '@cribbgolf/shared';
+import { getGolfTermForScore } from '@cribbgolf/shared';
 
 export interface PendingDeclaration {
   seat: PlayerSeat;
@@ -15,6 +16,23 @@ export interface Toast {
   type: 'hazard' | 'hole-complete' | 'birdie' | 'eagle' | 'info';
   message: string;
   sub?: string;
+}
+
+export interface HazardPopupData {
+  hazardType: string;
+  penaltyStrokes: number;
+  diceRoll?: [number, number];
+  diceOutcome?: 'advance1' | 'stay-penalty' | 'advance3-strokeoff';
+  description: string;
+}
+
+export interface HolePopupData {
+  holeNumber: number;
+  par: number;
+  strokes: number;
+  relativeToPar: number;
+  term: string;
+  emoji: string;
 }
 
 export interface GameStore {
@@ -37,6 +55,8 @@ export interface GameStore {
   mugginsWindow: { missedItems: any[]; windowCloseAt: number; scoringPlayerId: string } | null;
   disconnectedSeats: number[];
   toasts: Toast[];
+  pendingHazardPopup: HazardPopupData | null;
+  pendingHolePopup: HolePopupData | null;
   error: string | null;
 
   setSocketId: (id: string) => void;
@@ -58,6 +78,9 @@ export interface GameStore {
   setDisconnectedSeats: (seats: number[]) => void;
   addToast: (toast: Omit<Toast, 'id'>) => void;
   dismissToast: (id: string) => void;
+  setPendingHazardPopup: (data: HazardPopupData | null) => void;
+  setPendingHolePopup: (data: HolePopupData | null) => void;
+  triggerMovementAlerts: (movements: any[]) => void;
   setError: (err: string | null) => void;
   reset: () => void;
 }
@@ -78,6 +101,8 @@ const initialState = {
   pendingGolfScores: null,
   mugginsWindow: null,
   disconnectedSeats: [],
+  pendingHazardPopup: null,
+  pendingHolePopup: null,
   toasts: [],
   error: null,
 };
@@ -153,6 +178,68 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+
+  setPendingHazardPopup: (data) => set({ pendingHazardPopup: data }),
+  setPendingHolePopup: (data) => set({ pendingHolePopup: data }),
+
+  triggerMovementAlerts: (movements) => {
+    const { mySeat, gameState } = get();
+    if (mySeat === null || !gameState) return;
+    const myId = gameState.players[mySeat]?.id;
+    if (!myId) return;
+
+    for (const m of movements) {
+      if (m.playerId !== myId) continue;
+
+      // Show popup for first hazard hit
+      const hazards: any[] = m.hazardsHit ?? [];
+      for (const h of hazards) {
+        const type = h.peghole?.type;
+        if (!type || ['fairway', 'green', 'cup', 'tee'].includes(type)) continue;
+        set({
+          pendingHazardPopup: {
+            hazardType: type,
+            penaltyStrokes: h.result?.penaltyStrokes ?? 0,
+            diceRoll: h.result?.diceRoll,
+            diceOutcome: h.result?.diceOutcome,
+            description: h.result?.description ?? '',
+          },
+        });
+        break;
+      }
+
+      // Show popup for last hole completed
+      const holesCompleted: number[] = m.holesCompleted ?? [];
+      if (holesCompleted.length > 0) {
+        const lastHole = holesCompleted[holesCompleted.length - 1];
+        const golfScore = gameState.golfScores.find((s: any) => s.playerId === myId);
+        const hs = golfScore?.holeScores.find((h: any) => h.holeNumber === lastHole);
+        if (hs) {
+          const rel: number = hs.relativeToPar;
+          const term = getGolfTermForScore(rel);
+          let emoji = '⛳';
+          if ((hs as any).isDoubleEagle) emoji = '🦅🦅';
+          else if ((hs as any).isEagle)  emoji = '🦅';
+          else if ((hs as any).isBirdie) emoji = '🐦';
+          else if (rel === 0)            emoji = '✅';
+          else if (rel === 1)            emoji = '😤';
+          else if (rel >= 2)             emoji = '😬';
+          set({
+            pendingHolePopup: {
+              holeNumber: lastHole,
+              par: hs.par,
+              strokes: hs.strokes,
+              relativeToPar: rel,
+              term,
+              emoji,
+            },
+          });
+        }
+      }
+
+      break; // Only process MY movement
+    }
+  },
 
   setError: (err) => set({ error: err }),
   reset: () => set(initialState),

@@ -16,6 +16,8 @@
   width: 100%;
   max-width: 480px;
   border-top: 2px solid rgba(255,255,255,0.12);
+  overflow-y: auto;
+  max-height: calc(100dvh - 40px);
 }
 
 .title {

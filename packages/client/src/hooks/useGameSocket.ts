@@ -91,6 +91,7 @@ export function useGameSocket() {
         store().addPegMovements(pegMovements);
         checkHazardToasts(pegMovements);
         checkHoleToasts(pegMovements);
+        store().triggerMovementAlerts(pegMovements);
       }
     });
 
@@ -116,6 +117,7 @@ export function useGameSocket() {
       if (pegMovements?.length) {
         store().addPegMovements(pegMovements);
         checkHoleToasts(pegMovements);
+        store().triggerMovementAlerts(pegMovements);
       }
     });
 
@@ -175,6 +177,7 @@ export function useGameSocket() {
         store().addPegMovements(pegMovements);
         checkHazardToasts(pegMovements);
         checkHoleToasts(pegMovements);
+        store().triggerMovementAlerts(pegMovements);
       }
     });
 
