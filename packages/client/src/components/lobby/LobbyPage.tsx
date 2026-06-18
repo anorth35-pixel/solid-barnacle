@@ -75,6 +75,7 @@ export default function LobbyPage() {
     getSocket().emit('room:create', { playerName: name.trim(), config });
     getSocket().once('room:created', ({ roomCode: rc, room: r }: any) => {
       setRoom(r, rc);
+      setMySeat(0);
       navigate(`/room/${rc}`);
     });
   }

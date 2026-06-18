@@ -17,6 +17,13 @@ export default function RoomPage() {
   const allReady = room?.players.length === room?.config.playerCount
     && room?.players.every((p) => p.ready || p.isHost);
 
+  // Auto-start once all players are ready (host triggers it)
+  useEffect(() => {
+    if (isHost && allReady && (room?.players.length ?? 0) >= (room?.config.playerCount ?? 2)) {
+      getSocket().emit('game:start', {});
+    }
+  }, [isHost, allReady, room?.players.length]);
+
   // Auto-join: listen for room:joined while on this page
   useEffect(() => {
     if (inRoom) return;
@@ -119,11 +126,15 @@ export default function RoomPage() {
               {myPlayer?.ready ? 'Not Ready' : 'Ready'}
             </button>
           )}
-          {isHost && (
-            <button className="btn-primary" onClick={startGame}
-              disabled={!allReady || (room?.players.length ?? 0) < (room?.config.playerCount ?? 2)}>
-              Start Game
-            </button>
+          {isHost && !allReady && (
+            <p style={{ color: 'var(--gray)', fontSize: '0.9rem', margin: 0 }}>
+              Waiting for all players to ready up…
+            </p>
+          )}
+          {isHost && allReady && (
+            <p style={{ color: 'var(--green-dark)', fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>
+              Starting game…
+            </p>
           )}
         </div>
       </div>
