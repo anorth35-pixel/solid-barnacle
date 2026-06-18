@@ -29,6 +29,8 @@ export interface GameStore {
   gameState: GameState | null;
   lastBreakdowns: ScoreBreakdown[];
   lastPegMovements: PegMovement[];
+  currentScoringBreakdown: ScoreBreakdown | null;
+  pendingGolfScores: PlayerGolfScore[] | null;
 
   pendingDeclaration: PendingDeclaration | null;
   mugginsWindow: { missedItems: any[]; windowCloseAt: number; scoringPlayerId: string } | null;
@@ -45,6 +47,9 @@ export interface GameStore {
   patchGameState: (patch: Partial<GameState>) => void;
   addBreakdown: (bd: ScoreBreakdown) => void;
   addPegMovements: (movements: PegMovement[]) => void;
+  setCurrentScoringBreakdown: (bd: ScoreBreakdown | null) => void;
+  setPendingGolfScores: (scores: PlayerGolfScore[] | null) => void;
+  commitPendingGolfScores: () => void;
   setPendingDeclaration: (d: PendingDeclaration | null) => void;
   openMuggins: (data: { missedItems: any[]; windowCloseAt: number; scoringPlayerId: string }) => void;
   closeMuggins: () => void;
@@ -66,6 +71,8 @@ const initialState = {
   gameState: null,
   lastBreakdowns: [],
   lastPegMovements: [],
+  currentScoringBreakdown: null,
+  pendingGolfScores: null,
   mugginsWindow: null,
   disconnectedSeats: [],
   toasts: [],
@@ -113,6 +120,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   })),
 
   addPegMovements: (movements) => set({ lastPegMovements: movements }),
+
+  setCurrentScoringBreakdown: (bd) => set({ currentScoringBreakdown: bd }),
+
+  setPendingGolfScores: (scores) => set({ pendingGolfScores: scores }),
+
+  commitPendingGolfScores: () => {
+    const { gameState, pendingGolfScores } = get();
+    if (!gameState || !pendingGolfScores) return;
+    set({
+      gameState: { ...gameState, golfScores: pendingGolfScores },
+      pendingGolfScores: null,
+    });
+  },
 
   setPendingDeclaration: (d) => set({ pendingDeclaration: d }),
   openMuggins: (data) => set({ mugginsWindow: data }),

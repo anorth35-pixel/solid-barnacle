@@ -126,28 +126,20 @@ export function useGameSocket() {
     socket.on('game:hand-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
       store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
-      store().patchGameState({
-        phase: 'hand-scoring',
-        ...(golfScores ? { golfScores } : {}),
-      });
-      if (pegMovements?.length) {
-        store().addPegMovements(pegMovements);
-        checkHazardToasts(pegMovements);
-        checkHoleToasts(pegMovements);
-      }
+      store().setCurrentScoringBreakdown(breakdown);
+      // Hold back golfScores — ScoringPhase commits them after the reveal feed finishes
+      if (golfScores) store().setPendingGolfScores(golfScores);
+      store().patchGameState({ phase: 'hand-scoring' });
+      if (pegMovements?.length) store().addPegMovements(pegMovements);
     });
 
     socket.on('game:crib-score', ({ seat, breakdown, pegMovements, golfScores }: any) => {
       store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
-      store().patchGameState({
-        phase: 'crib-scoring',
-        ...(golfScores ? { golfScores } : {}),
-      });
-      if (pegMovements?.length) {
-        store().addPegMovements(pegMovements);
-        checkHoleToasts(pegMovements);
-      }
+      store().setCurrentScoringBreakdown(breakdown);
+      if (golfScores) store().setPendingGolfScores(golfScores);
+      store().patchGameState({ phase: 'crib-scoring' });
+      if (pegMovements?.length) store().addPegMovements(pegMovements);
     });
 
     socket.on('game:muggins-window', (data: any) => store().openMuggins(data));

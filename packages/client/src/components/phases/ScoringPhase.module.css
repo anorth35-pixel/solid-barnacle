@@ -1,24 +1,119 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  gap: 8px;
   width: 100%;
+  max-width: 460px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.heading {
-  font-size: 1.1rem;
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.phaseBadge {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.playerName {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.runningTotal {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #ffd54f;
+  min-width: 52px;
+  text-align: right;
+  transition: opacity 0.2s;
+}
+
+/* ── Reveal feed ── */
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+}
+
+.feedItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  animation: slideIn 0.2s ease-out both;
+}
+
+.itemDesc {
+  font-size: 0.87rem;
   opacity: 0.9;
 }
 
-.breakdowns {
+.itemPts {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #81c784;
+}
+
+/* ── Footer ── */
+.footer {
+  min-height: 18px;
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
+}
+
+.hint {
+  font-size: 0.72rem;
+  opacity: 0.3;
+}
+
+.statusMoving {
+  font-size: 0.8rem;
+  opacity: 0.6;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.statusDone {
+  font-size: 0.8rem;
+  opacity: 0.55;
 }
 
 .waiting {
   opacity: 0.6;
   font-style: italic;
+  text-align: center;
+}
+
+/* ── Animations ── */
+@keyframes slideIn {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.25; }
 }
