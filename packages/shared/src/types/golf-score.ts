@@ -57,8 +57,12 @@ export function createInitialGolfScore(playerId: string): PlayerGolfScore {
 }
 
 // Penalty strokes added for each hole not completed at game end (per the rules table)
-export function holesNotCompletedPenalty(holesNotCompleted: number): number {
-  // Each unfinished hole is scored as double bogey (+2), which is a reasonable
-  // penalty for not reaching the cup. This approximates the official penalty table.
-  return holesNotCompleted * 2;
+export function holesNotCompletedPenalty(currentHole: number): number {
+  // Per rules table: each unfinished hole h gets (19 - h) penalty strokes
+  // Hole 18 = +1, hole 17 = +2, ..., hole 11 = +8, extending back to hole 1 = +18
+  let penalty = 0;
+  for (let h = currentHole; h <= 18; h++) {
+    penalty += (19 - h);
+  }
+  return penalty;
 }

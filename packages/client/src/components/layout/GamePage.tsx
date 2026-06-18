@@ -23,7 +23,13 @@ export default function GamePage() {
     return <div className={styles.loading}>Connecting to game…</div>;
   }
 
-  const { phase, players, golfScores, course, starterCard, stakesState, config } = gameState;
+  const { phase, players, golfScores, course, starterCard, stakesState, config, matchScore } = gameState;
+
+  function relStr(n: number) {
+    return n === 0 ? 'E' : n > 0 ? '+' + n : String(n);
+  }
+
+  const isMatchPlay = config.matchPlay && matchScore;
   const playerNames = players.map((p) => p.name);
   const playerIds = players.map((p) => p.id);
   const showStarter = starterCard && ['pegging', 'hand-scoring', 'crib-scoring'].includes(phase);
@@ -80,11 +86,20 @@ export default function GamePage() {
             <span className={styles.playerDot} style={{ background: ['#1565c0', '#c62828', '#2e7d32'][i] }} />
             <span className={styles.playerName}>{p.name}{p.type === 'ai' ? ' 🤖' : ''}</span>
             <span className={styles.scoreChip}>
-              {golfScores[i]
-                ? (golfScores[i].totalRelativeToPar >= 0
-                    ? `+${golfScores[i].totalRelativeToPar}`
-                    : `${golfScores[i].totalRelativeToPar}`)
-                : 'E'}
+              {isMatchPlay
+                ? (() => {
+                    const standing = matchScore.standing;
+                    // standing: positive = seat 0 leads, negative = seat 1 leads
+                    // From this player's perspective:
+                    const myStanding = i === 0 ? standing : -standing;
+                    if (myStanding > 0) return `${myStanding}UP`;
+                    if (myStanding < 0) return `${Math.abs(myStanding)}DN`;
+                    return 'AS';
+                  })()
+                : (golfScores[i]
+                    ? relStr(golfScores[i].totalRelativeToPar)
+                    : 'E')
+              }
             </span>
             <span className={styles.holeChip}>H{golfScores[i]?.currentHole ?? 1}</span>
           </div>

@@ -31,11 +31,11 @@ export default function GameOverModal() {
 
   if (!gameState || gameState.phase !== 'game-over') return null;
 
-  const { players, golfScores, winner, course, stakesState, config } = gameState;
+  const { players, golfScores, winner, course, stakesState, config, matchScore } = gameState;
   const stakesConfig = config?.stakesConfig;
 
   const adjustedScores = golfScores.map((gs, i) => {
-    const penalty = gs.isFinished ? 0 : holesNotCompletedPenalty(18 - gs.holesCompleted);
+    const penalty = gs.isFinished ? 0 : holesNotCompletedPenalty(gs.currentHole);
     return { ...gs, adjustedTotal: gs.totalRelativeToPar + penalty, penalty, seat: i };
   });
   const sorted = [...adjustedScores].sort((a, b) => a.adjustedTotal - b.adjustedTotal);
@@ -128,6 +128,67 @@ export default function GameOverModal() {
         {/* Winner announcement */}
         <div className={styles.trophy}>🏆</div>
         <h2 className={styles.heading}>{winnerName} wins!</h2>
+
+        {/* Match play result */}
+        {config.matchPlay && matchScore && (() => {
+          const ms = matchScore;
+          const standing = ms.standing;
+          const [p0, p1] = players;
+          const winnerName = ms.winnerId
+            ? (players.find(p => p.id === ms.winnerId)?.name ?? 'Player')
+            : 'Tie';
+
+          // "N&M" or "N UP" notation
+          const lastDecided = ms.holeResults.length > 0
+            ? Math.max(...ms.holeResults.map(r => r.holeNumber))
+            : 18;
+          const holesRemaining = 18 - lastDecided;
+          let matchResult = '';
+          if (ms.winnerId === null) {
+            matchResult = 'All Square';
+          } else if (holesRemaining > 0) {
+            matchResult = `${Math.abs(standing)}&${holesRemaining}`;
+          } else {
+            matchResult = `${Math.abs(standing)} UP`;
+          }
+
+          const sortedResults = [...ms.holeResults].sort((a, b) => a.holeNumber - b.holeNumber);
+
+          return (
+            <div className={styles.matchResult}>
+              <div className={styles.matchTerm}>{matchResult}</div>
+              <div className={styles.matchWinner}>{ms.winnerId ? `${winnerName} wins the match` : 'Match tied'}</div>
+              <table className={styles.matchTable}>
+                <thead>
+                  <tr>
+                    <th>Hole</th>
+                    {sortedResults.map(r => (
+                      <th key={r.holeNumber}>{r.holeNumber}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ color: PLAYER_COLORS[0] }}>{p0.name}</td>
+                    {sortedResults.map(r => (
+                      <td key={r.holeNumber} className={r.winnerPlayerId === p0.id ? styles.matchWin : r.winnerPlayerId === null ? styles.matchHalve : styles.matchLoss}>
+                        {r.p0Strokes}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td style={{ color: PLAYER_COLORS[1] }}>{p1.name}</td>
+                    {sortedResults.map(r => (
+                      <td key={r.holeNumber} className={r.winnerPlayerId === p1.id ? styles.matchWin : r.winnerPlayerId === null ? styles.matchHalve : styles.matchLoss}>
+                        {r.p1Strokes}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
 
         {/* Summary table */}
         <table className={styles.summaryTable}>
@@ -262,7 +323,7 @@ export default function GameOverModal() {
         {stakesSettlement()}
 
         {adjustedScores.some(s => s.penalty > 0) && (
-          <p className={styles.penaltyNote}>* +2 penalty per unfinished hole</p>
+          <p className={styles.penaltyNote}>* penalty strokes per unfinished hole (19 − hole number)</p>
         )}
 
         <button className="btn-primary" onClick={() => { reset(); navigate('/'); }}>

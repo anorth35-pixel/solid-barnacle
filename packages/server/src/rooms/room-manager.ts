@@ -69,6 +69,7 @@ export function createRoom(
     mugginsWindowMs: configOverride.mugginsWindowMs ?? 15_000,
     aiDifficulty: configOverride.aiDifficulty,
     manualScoring: configOverride.manualScoring ?? false,
+    matchPlay: configOverride.matchPlay ?? false,
     stakesConfig: configOverride.stakesConfig,
   };
 

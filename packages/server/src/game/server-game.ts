@@ -1,4 +1,4 @@
-import type { GameState, GameConfig, PeggingState } from '@cribbgolf/shared';
+import type { GameState, GameConfig, PeggingState, MatchHoleResult, MatchScore } from '@cribbgolf/shared';
 import type { Player, PlayerSeat } from '@cribbgolf/shared';
 import type { Card } from '@cribbgolf/shared';
 import type { ScoreBreakdown, ScoreEvent, MugginsState, ScoreItem } from '@cribbgolf/shared';
@@ -51,10 +51,15 @@ export class ServerGame {
       pendingPegMovements: [],
       stakesState: createInitialStakesState(),
       finishingBonusAwardedTo: null,
+      matchScore: null,
     };
   }
 
   startGame(): void {
+    this.state.matchScore = this.state.config.matchPlay
+      ? { holeResults: [], standing: 0, isDecided: false, winnerId: null }
+      : null;
+
     if (this.state.config.mode === 'board-only') {
       this.state.phase = 'board-play';
       // All players need to choose their first path
@@ -356,6 +361,16 @@ export class ServerGame {
 
   private checkWin(): boolean {
     if (this.state.winner !== null) return true;
+    // Match play: check if match is decided
+    if (this.state.matchScore?.isDecided && this.state.matchScore.winnerId) {
+      const winnerPlayer = this.state.players.find((p) => p.id === this.state.matchScore!.winnerId);
+      if (winnerPlayer) {
+        this.state.winner = winnerPlayer.seat;
+        this.state.phase = 'game-over';
+        return true;
+      }
+    }
+    // Stroke play: first to finish hole 18
     const winner = this.state.golfScores.find((gs) => gs.isFinished);
     if (winner) {
       this.state.winner = this.state.players.find((p) => p.id === winner.playerId)!.seat;
@@ -363,6 +378,55 @@ export class ServerGame {
       return true;
     }
     return false;
+  }
+
+  private updateMatchScore(): void {
+    const ms = this.state.matchScore;
+    if (!ms || this.state.players.length !== 2) return;
+
+    const [p0, p1] = this.state.players;
+    const gs0 = this.state.golfScores.find((g) => g.playerId === p0.id)!;
+    const gs1 = this.state.golfScores.find((g) => g.playerId === p1.id)!;
+
+    // Find any holes both players have now completed but aren't yet in holeResults
+    const decided = new Set(ms.holeResults.map((r) => r.holeNumber));
+    for (const hs0 of gs0.holeScores) {
+      if (decided.has(hs0.holeNumber)) continue;
+      const hs1 = gs1.holeScores.find((h) => h.holeNumber === hs0.holeNumber);
+      if (!hs1) continue; // other player hasn't finished this hole yet
+      ms.holeResults.push({
+        holeNumber: hs0.holeNumber,
+        winnerPlayerId: hs0.strokes < hs1.strokes ? p0.id
+                      : hs1.strokes < hs0.strokes ? p1.id
+                      : null,
+        p0Strokes: hs0.strokes,
+        p1Strokes: hs1.strokes,
+      });
+    }
+
+    // Recompute standing from all decided holes
+    let standing = 0;
+    for (const r of ms.holeResults) {
+      if (r.winnerPlayerId === p0.id) standing++;
+      else if (r.winnerPlayerId === p1.id) standing--;
+    }
+    ms.standing = standing;
+
+    // Match is decided when abs(standing) > holes remaining (based on last decided hole)
+    if (ms.holeResults.length > 0 && !ms.isDecided) {
+      const lastDecided = Math.max(...ms.holeResults.map((r) => r.holeNumber));
+      const holesRemaining = 18 - lastDecided;
+      if (Math.abs(standing) > holesRemaining) {
+        ms.isDecided = true;
+        ms.winnerId = standing > 0 ? p0.id : p1.id;
+      }
+    }
+
+    // All 18 holes decided — match is over
+    if (ms.holeResults.length === 18 && !ms.isDecided) {
+      ms.isDecided = true;
+      ms.winnerId = standing > 0 ? p0.id : standing < 0 ? p1.id : null; // null = tie
+    }
   }
 
   private awardPoints(seat: PlayerSeat, breakdown: ScoreBreakdown): ScoreEvent {
@@ -383,6 +447,7 @@ export class ServerGame {
     if (gsIndex === -1 || breakdown.total === 0) return;
 
     const isFirstFinisher =
+      !this.state.config.matchPlay &&
       this.state.finishingBonusAwardedTo === null &&
       this.state.golfScores[gsIndex].holesCompleted < 18;
 
@@ -410,6 +475,9 @@ export class ServerGame {
       const holeScore = updated.holeScores.find((h) => h.holeNumber === holeNum);
       if (holeScore) this.updateStakes(player.id, holeScore, movement.hazardsHit);
     }
+
+    // Update match score if applicable
+    this.updateMatchScore();
 
     // AI players auto-choose their next path immediately
     this.autoChoosePathsForAI();

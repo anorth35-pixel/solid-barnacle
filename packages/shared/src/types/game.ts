@@ -29,6 +29,7 @@ export interface GameConfig {
   aiDifficulty?: AIDifficulty;
   manualScoring: boolean;
   stakesConfig?: StakesConfig;
+  matchPlay: boolean;
 }
 
 export interface PeggingState {
@@ -37,6 +38,20 @@ export interface PeggingState {
   lastPlayerToPlay: PlayerSeat | null;
   goCalledBy: PlayerSeat[];
   subRoundsComplete: number;
+}
+
+export interface MatchHoleResult {
+  holeNumber: number;
+  winnerPlayerId: string | null; // null = halved
+  p0Strokes: number;
+  p1Strokes: number;
+}
+
+export interface MatchScore {
+  holeResults: MatchHoleResult[]; // holes where BOTH players have a completed HoleScore
+  standing: number;               // positive = seat-0 player leads, negative = seat-1 leads
+  isDecided: boolean;
+  winnerId: string | null;
 }
 
 export interface GameState {
@@ -59,4 +74,5 @@ export interface GameState {
   pendingPegMovements: PegMovement[];
   stakesState: StakesState;
   finishingBonusAwardedTo: string | null; // playerId who got the −2 finishing bonus
+  matchScore: MatchScore | null;
 }

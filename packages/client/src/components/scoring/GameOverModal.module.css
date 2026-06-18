@@ -214,6 +214,39 @@
 .stakeNeg { color: #ef9a9a; font-size: 1rem; font-weight: 800; }
 .stakeUnits { color: rgba(255,255,255,0.35); font-size: 0.68rem; }
 
+/* ── Match play result ──────────────────────────────────────────────────── */
+.matchResult {
+  margin: 16px 0;
+  text-align: center;
+}
+.matchTerm {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #ffd54f;
+  letter-spacing: 0.04em;
+}
+.matchWinner {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin-bottom: 12px;
+}
+.matchTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  display: block;
+}
+.matchTable th, .matchTable td {
+  padding: 4px 6px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 28px;
+}
+.matchWin  { background: rgba(102,187,106,0.25); color: #81c784; font-weight: 700; }
+.matchHalve{ background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); }
+.matchLoss { background: rgba(239,83,80,0.12);  color: #ef5350; }
+
 /* ── Misc ───────────────────────────────────────────────────────────────── */
 .penaltyNote {
   font-size: 0.72rem;

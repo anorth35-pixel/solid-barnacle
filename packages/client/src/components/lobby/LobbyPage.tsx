@@ -24,6 +24,7 @@ export default function LobbyPage() {
   const [manualScoring, setManualScoring] = useState(false);
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [aiCount, setAICount] = useState<1 | 2>(1);
+  const [matchPlay, setMatchPlay] = useState(false);
   const [enabledStakes, setEnabledStakes] = useState<StakeType[]>([]);
   const [boardPlayerCount, setBoardPlayerCount] = useState<2 | 3>(2);
   const [boardPlayerNames, setBoardPlayerNames] = useState(['', '']);
@@ -70,6 +71,7 @@ export default function LobbyPage() {
     if (!name.trim()) return;
     const config: Partial<GameConfig> = {
       playerCount, mugginsEnabled: muggins, manualScoring, mode: 'remote',
+      matchPlay,
       stakesConfig: stakesConfig(),
     };
     getSocket().emit('room:create', { playerName: name.trim(), config });
@@ -114,6 +116,7 @@ export default function LobbyPage() {
       manualScoring,
       mode: 'vs-ai',
       aiDifficulty,
+      matchPlay,
       stakesConfig: stakesConfig(),
     };
     getSocket().emit('room:create', { playerName: name.trim(), config });
@@ -192,6 +195,10 @@ export default function LobbyPage() {
                 <input type="checkbox" checked={manualScoring} onChange={(e) => setManualScoring(e.target.checked)} />
                 Manual point counting
               </label>
+              <label className={styles.checkRow}>
+                <input type="checkbox" checked={matchPlay} onChange={(e) => setMatchPlay(e.target.checked)} />
+                Match play <span style={{ opacity: 0.55, fontSize: '0.8rem' }}>(hole-by-hole vs stroke total)</span>
+              </label>
 
               <label className={styles.stakesLabel}>Optional Stakes</label>
               <div className={styles.stakesGrid}>
@@ -244,6 +251,10 @@ export default function LobbyPage() {
               <label className={styles.checkRow}>
                 <input type="checkbox" checked={manualScoring} onChange={(e) => setManualScoring(e.target.checked)} />
                 Manual point counting
+              </label>
+              <label className={styles.checkRow}>
+                <input type="checkbox" checked={matchPlay} onChange={(e) => setMatchPlay(e.target.checked)} />
+                Match play <span style={{ opacity: 0.55, fontSize: '0.8rem' }}>(hole-by-hole vs stroke total)</span>
               </label>
 
               <label className={styles.stakesLabel}>Optional Stakes</label>
