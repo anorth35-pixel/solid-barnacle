@@ -11,12 +11,19 @@ function generateCode(): string {
   return code;
 }
 
+function generateToken(): string {
+  return Array.from({ length: 16 }, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  ).join('');
+}
+
 export interface RoomPlayer {
   socketId: string;
   name: string;
   seat: 0 | 1 | 2;
   ready: boolean;
   isHost: boolean;
+  sessionToken: string;
 }
 
 export interface Room {
@@ -30,6 +37,7 @@ export interface Room {
 }
 
 const rooms = new Map<string, Room>();
+const sessionTokens = new Map<string, { roomCode: string; seat: number }>();
 
 function toSummary(room: Room): RoomSummary {
   return {
@@ -64,16 +72,18 @@ export function createRoom(
     stakesConfig: configOverride.stakesConfig,
   };
 
+  const token = generateToken();
   const room: Room = {
     code,
     hostSocketId: socketId,
-    players: [{ socketId, name: playerName, seat: 0, ready: true, isHost: true }],
+    players: [{ socketId, name: playerName, seat: 0, ready: true, isHost: true, sessionToken: token }],
     config,
     state: 'waiting',
     createdAt: Date.now(),
     lastActivityAt: Date.now(),
   };
   rooms.set(code, room);
+  sessionTokens.set(token, { roomCode: code, seat: 0 });
   return room;
 }
 
@@ -83,7 +93,9 @@ export function joinRoom(socketId: string, roomCode: string, playerName: string)
   if (room.players.length >= room.config.playerCount) return null;
 
   const seat = room.players.length as 0 | 1 | 2;
-  room.players.push({ socketId, name: playerName, seat, ready: false, isHost: false });
+  const token = generateToken();
+  room.players.push({ socketId, name: playerName, seat, ready: false, isHost: false, sessionToken: token });
+  sessionTokens.set(token, { roomCode: room.code, seat });
   room.lastActivityAt = Date.now();
   return room;
 }
@@ -116,11 +128,38 @@ export function removePlayer(socketId: string): { room: Room; seat: number } | n
     const idx = room.players.findIndex((p) => p.socketId === socketId);
     if (idx !== -1) {
       const [removed] = room.players.splice(idx, 1);
+      sessionTokens.delete(removed.sessionToken);
       if (room.players.length === 0) rooms.delete(room.code);
       return { room, seat: removed.seat };
     }
   }
   return null;
+}
+
+export function disconnectPlayer(socketId: string): { room: Room; seat: number } | null {
+  for (const room of rooms.values()) {
+    const player = room.players.find((p) => p.socketId === socketId);
+    if (player) {
+      player.socketId = '';
+      return { room, seat: player.seat };
+    }
+  }
+  return null;
+}
+
+export function rejoinPlayer(
+  token: string,
+  newSocketId: string,
+): { room: Room; seat: number; player: RoomPlayer } | null {
+  const entry = sessionTokens.get(token);
+  if (!entry) return null;
+  const { roomCode, seat } = entry;
+  const room = rooms.get(roomCode);
+  if (!room) return null;
+  const player = room.players.find((p) => p.seat === seat);
+  if (!player) return null;
+  player.socketId = newSocketId;
+  return { room, seat, player };
 }
 
 export function markInGame(code: string): void {

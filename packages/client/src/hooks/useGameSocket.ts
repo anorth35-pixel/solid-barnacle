@@ -13,16 +13,24 @@ export function useGameSocket() {
     // Always read state from the store singleton, not from closure
     const store = () => useGameStore.getState();
 
-    socket.on('connect', () => store().setSocketId(socket.id ?? ''));
+    socket.on('connect', () => {
+      store().setSocketId(socket.id ?? '');
+      const token = localStorage.getItem('cribbgolf_session');
+      if (token && !store().gameState) {
+        socket.emit('game:rejoin', { token });
+      }
+    });
     socket.on('disconnect', () => store().setSocketId(''));
 
-    socket.on('room:created', ({ roomCode, room }: any) => {
+    socket.on('room:created', ({ roomCode, room, sessionToken }: any) => {
       store().setRoom(room, roomCode);
+      if (sessionToken) localStorage.setItem('cribbgolf_session', sessionToken);
     });
 
-    socket.on('room:joined', ({ room, yourSeat }: any) => {
+    socket.on('room:joined', ({ room, yourSeat, sessionToken }: any) => {
       store().setRoom(room);
       store().setMySeat(yourSeat);
+      if (sessionToken) localStorage.setItem('cribbgolf_session', sessionToken);
       navigate(`/room/${room.code}`);
     });
 
@@ -171,6 +179,7 @@ export function useGameSocket() {
     });
 
     socket.on('game:over', ({ winnerSeat, finalGolfScores, stakesState, finishingBonusAwardedTo }: any) => {
+      localStorage.removeItem('cribbgolf_session');
       store().patchGameState({
         winner: winnerSeat,
         golfScores: finalGolfScores,
@@ -181,6 +190,10 @@ export function useGameSocket() {
     });
 
     socket.on('game:error', ({ message }: any) => store().setError(message));
+
+    socket.on('game:rejoined', ({ roomCode }: any) => {
+      // game:phase-change will arrive with the state and trigger navigation
+    });
 
     function checkHazardToasts(movements: any[]) {
       for (const m of movements) {
@@ -285,6 +298,7 @@ export function useGameSocket() {
       socket.off('game:points-awarded');
       socket.off('game:over');
       socket.off('game:error');
+      socket.off('game:rejoined');
     };
   }, []);
 

@@ -4,6 +4,7 @@ import type { Player } from '@cribbgolf/shared';
 import {
   createRoom, joinRoom, setReady, getRoomBySocket,
   markInGame, removePlayer, toSummary,
+  disconnectPlayer, rejoinPlayer,
 } from '../rooms/room-manager.js';
 import { ServerGame } from '../game/server-game.js';
 import { AITurnRunner } from '../game/ai-turn-runner.js';
@@ -21,7 +22,8 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
   socket.on('room:create', ({ playerName, config }: { playerName: string; config: Partial<GameConfig> }) => {
     const room = createRoom(socket.id, playerName, config);
     socket.join(room.code);
-    socket.emit('room:created', { roomCode: room.code, room: toSummary(room) });
+    const token = room.players[0].sessionToken;
+    socket.emit('room:created', { roomCode: room.code, room: toSummary(room), sessionToken: token });
   });
 
   socket.on('room:join', ({ roomCode, playerName }: { roomCode: string; playerName: string }) => {
@@ -32,8 +34,10 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     }
     socket.join(room.code);
     const summary = toSummary(room);
-    const seat = room.players.find((p) => p.socketId === socket.id)!.seat;
-    socket.emit('room:joined', { room: summary, yourSeat: seat });
+    const joinedPlayer = room.players.find((p) => p.socketId === socket.id)!;
+    const seat = joinedPlayer.seat;
+    const token = joinedPlayer.sessionToken;
+    socket.emit('room:joined', { room: summary, yourSeat: seat, sessionToken: token });
     socket.to(room.code).emit('room:updated', { room: summary });
   });
 
@@ -260,6 +264,41 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     if (resolver) resolver(Math.max(0, Math.floor(declaredPoints)));
   });
 
+  // ── Reconnection ───────────────────────────────────────────────────────────
+
+  socket.on('game:rejoin', ({ token }: { token: string }) => {
+    const result = rejoinPlayer(token, socket.id);
+    if (!result) {
+      socket.emit('room:error', { code: 'REJOIN_FAILED', message: 'Session expired or not found' });
+      return;
+    }
+    const { room, seat } = result;
+    socket.join(room.code);
+    // Cancel the game-delete timer for this seat
+    const key = `${room.code}-${seat}`;
+    clearTimeout(reconnectTimers.get(key));
+    reconnectTimers.delete(key);
+    // Let others know
+    io.to(room.code).emit('player:reconnected', { seat });
+    // Send full game state to the rejoining player
+    const game = activeGames.get(room.code);
+    if (game) {
+      socket.emit('game:phase-change', {
+        phase: game.state.phase,
+        state: sanitizeState(game.state),
+      });
+      // Send their private hand
+      const player = game.state.players.find((p) => p.seat === seat && p.type === 'human');
+      if (player) {
+        socket.emit('game:dealt', {
+          yourHand: player.hand,
+          dealerSeat: game.state.dealerSeat,
+        });
+      }
+    }
+    socket.emit('game:rejoined', { seat, roomCode: room.code });
+  });
+
   // ── Disconnect ─────────────────────────────────────────────────────────────
 
   socket.on('disconnect', () => handleDisconnect(io, socket));
@@ -325,11 +364,12 @@ function afterPegAction(io: Server, roomCode: string, game: ServerGame): void {
 }
 
 function handleDisconnect(io: Server, socket: Socket): void {
-  const result = removePlayer(socket.id);
-  if (!result) return;
-  const { room, seat } = result;
-
-  if (room.state === 'in-game') {
+  // Check if they're in an active game — don't fully remove, just mark offline
+  const activeRoom = getRoomBySocket(socket.id);
+  if (activeRoom && activeRoom.state === 'in-game') {
+    const result = disconnectPlayer(socket.id);
+    if (!result) return;
+    const { room, seat } = result;
     io.to(room.code).emit('player:disconnected', { seat, waitingMs: RECONNECT_TIMEOUT_MS });
     const key = `${room.code}-${seat}`;
     clearTimeout(reconnectTimers.get(key));
@@ -337,9 +377,15 @@ function handleDisconnect(io: Server, socket: Socket): void {
       activeGames.delete(room.code);
     }, RECONNECT_TIMEOUT_MS);
     reconnectTimers.set(key, timer);
-  } else {
-    io.to(room.code).emit('room:updated', { room: toSummary(room) });
+    socket.leave(room.code);
+    return;
   }
+
+  // Lobby disconnect — fully remove
+  const result = removePlayer(socket.id);
+  if (!result) return;
+  const { room, seat } = result;
+  io.to(room.code).emit('room:updated', { room: toSummary(room) });
   socket.leave(room.code);
 }
 
