@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from 'react';
+import { useMemo, useRef, useEffect, useState } from 'react';
 import type { Course, GolfHole, PegholeType, StakesState, StakesConfig } from '@cribbgolf/shared';
 import type { PlayerGolfScore } from '@cribbgolf/shared';
 import styles from './GolfCourseBoard.module.css';
@@ -194,6 +194,55 @@ function HoleSVG({ hole, selectedPathId, pegIndex, playerColor, holeRelativeToPa
   const spineD = cpToD(spine);
   const CY = SVG_H / 2;
 
+  // ── Peg animation ──────────────────────────────────────────────────────────
+  const [animIdx, setAnimIdx] = useState<number | null>(pegIndex);
+  const animStartRef = useRef<number | null>(pegIndex);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
+    if (pegIndex === null) {
+      setAnimIdx(null);
+      animStartRef.current = null;
+      return;
+    }
+
+    const start = animStartRef.current ?? pegIndex;
+    if (start === pegIndex) {
+      setAnimIdx(pegIndex);
+      animStartRef.current = pegIndex;
+      return;
+    }
+
+    const pts = pathPts[selIdx] ?? [];
+    const maxIdx = Math.max(0, pts.length - 1);
+    const from = Math.min(Math.max(0, start), maxIdx);
+    const to   = Math.min(Math.max(0, pegIndex), maxIdx);
+
+    if (from === to) {
+      setAnimIdx(to);
+      animStartRef.current = to;
+      return;
+    }
+
+    const dir = to > from ? 1 : -1;
+    let delay = 0;
+    for (let i = from + dir; dir > 0 ? i <= to : i >= to; i += dir) {
+      const capturedI = i;
+      delay += 180;
+      timersRef.current.push(
+        setTimeout(() => { setAnimIdx(capturedI); animStartRef.current = capturedI; }, delay)
+      );
+    }
+
+    return () => { timersRef.current.forEach(clearTimeout); };
+  // pathPts/selIdx are stable for a given hole+path; only pegIndex drives animation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pegIndex]);
+  // ──────────────────────────────────────────────────────────────────────────
+
   return (
     <svg width={W} height={SVG_H} viewBox={`0 0 ${W} ${SVG_H}`}
       style={{ display: 'block', flexShrink: 0 }}>
@@ -300,16 +349,16 @@ function HoleSVG({ hole, selectedPathId, pegIndex, playerColor, holeRelativeToPa
         </g>
       )}
 
-      {/* Player peg */}
-      {pegIndex !== null && (() => {
+      {/* Player peg — steps through pegholes with CSS transform animation */}
+      {animIdx !== null && (() => {
         const pts = pathPts[selIdx];
         if (!pts || pts.length === 0) return null;
-        const idx = Math.min(Math.max(0, pegIndex), pts.length - 1);
+        const idx = Math.min(Math.max(0, animIdx), pts.length - 1);
         const [px, py] = pts[idx];
         return (
-          <g>
-            <circle cx={px} cy={py} r={12} fill={playerColor} opacity={0.2} />
-            <circle cx={px} cy={py} r={7.5} fill={playerColor} stroke="white" strokeWidth={2} />
+          <g style={{ transform: `translate(${px}px, ${py}px)`, transition: 'transform 0.15s ease-out' }}>
+            <circle cx={0} cy={0} r={12} fill={playerColor} opacity={0.2} />
+            <circle cx={0} cy={0} r={7.5} fill={playerColor} stroke="white" strokeWidth={2} />
           </g>
         );
       })()}
