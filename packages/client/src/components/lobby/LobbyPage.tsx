@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSocket } from '../../socket/socket-client.js';
 import { useGameStore } from '../../store/game-store.js';
@@ -49,8 +49,22 @@ export default function LobbyPage() {
   function setStakeValue(id: StakeType, val: number) {
     setStakeValues(prev => ({ ...prev, [id]: Math.max(0.25, val) }));
   }
+  const [joinError, setJoinError] = useState('');
+  const [joining, setJoining] = useState(false);
+
   const navigate = useNavigate();
   const { setRoom, setMySeat } = useGameStore();
+
+  // Listen for join errors while on the join tab
+  useEffect(() => {
+    const socket = getSocket();
+    function onError({ message }: { message: string }) {
+      setJoinError(message);
+      setJoining(false);
+    }
+    socket.on('room:error', onError);
+    return () => { socket.off('room:error', onError); };
+  }, []);
 
   function handleCreate() {
     if (!name.trim()) return;
@@ -67,6 +81,8 @@ export default function LobbyPage() {
 
   function handleJoin() {
     if (!name.trim() || code.length !== 6) return;
+    setJoinError('');
+    setJoining(true);
     getSocket().emit('room:join', { roomCode: code.toUpperCase(), playerName: name.trim() });
   }
 
@@ -333,14 +349,20 @@ export default function LobbyPage() {
               <label>Room Code</label>
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                onChange={(e) => { setCode(e.target.value.toUpperCase()); setJoinError(''); }}
                 placeholder="6-letter code"
                 maxLength={6}
                 style={{ textTransform: 'uppercase', letterSpacing: '0.2em' }}
+                onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
               />
+              {joinError && (
+                <p style={{ color: '#ef5350', fontSize: '0.85rem', margin: '-4px 0 0', fontWeight: 600 }}>
+                  ⚠️ {joinError}
+                </p>
+              )}
               <button className="btn-primary" style={{ width: '100%' }} onClick={handleJoin}
-                disabled={!name.trim() || code.length !== 6}>
-                Join Room
+                disabled={!name.trim() || code.length !== 6 || joining}>
+                {joining ? 'Joining…' : 'Join Room'}
               </button>
             </>
           )}
