@@ -79,6 +79,22 @@
   justify-content: center;
 }
 
+.continueBtn {
+  padding: 8px 28px;
+  border-radius: 20px;
+  border: none;
+  background: #2e7d32;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  animation: popIn 0.18s ease-out both;
+}
+
+.continueBtn:hover { background: #388e3c; }
+.continueBtn:active { transform: scale(0.96); }
+
 .hint {
   font-size: 0.72rem;
   opacity: 0.3;
@@ -109,6 +125,17 @@
   }
   to {
     transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.88);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
     opacity: 1;
   }
 }
