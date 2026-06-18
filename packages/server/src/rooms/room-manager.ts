@@ -61,12 +61,13 @@ export function createRoom(
     mugginsWindowMs: configOverride.mugginsWindowMs ?? 15_000,
     aiDifficulty: configOverride.aiDifficulty,
     manualScoring: configOverride.manualScoring ?? false,
+    stakesConfig: configOverride.stakesConfig,
   };
 
   const room: Room = {
     code,
     hostSocketId: socketId,
-    players: [{ socketId, name: playerName, seat: 0, ready: false, isHost: true }],
+    players: [{ socketId, name: playerName, seat: 0, ready: true, isHost: true }],
     config,
     state: 'waiting',
     createdAt: Date.now(),
