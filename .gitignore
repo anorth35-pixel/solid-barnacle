@@ -5,3 +5,4 @@ packages/server/public/
 .env.local
 *.log
 .DS_Store
+.claude/
