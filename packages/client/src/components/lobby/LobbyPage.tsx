@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSocket } from '../../socket/socket-client.js';
 import { useGameStore } from '../../store/game-store.js';
 import type { GameConfig, AIDifficulty, StakeType } from '@cribbgolf/shared';
+import type { RoomSummary } from '@cribbgolf/shared';
 import styles from './LobbyPage.module.css';
 
 const ALL_STAKES: { id: StakeType; label: string; desc: string }[] = [
@@ -18,7 +19,6 @@ type Tab = 'create' | 'join' | 'ai' | 'board';
 export default function LobbyPage() {
   const [tab, setTab] = useState<Tab>('ai');
   const [name, setName] = useState('');
-  const [code, setCode] = useState('');
   const [playerCount, setPlayerCount] = useState<2 | 3>(2);
   const [muggins, setMuggins] = useState(true);
   const [manualScoring, setManualScoring] = useState(false);
@@ -52,20 +52,35 @@ export default function LobbyPage() {
   }
   const [joinError, setJoinError] = useState('');
   const [joining, setJoining] = useState(false);
+  const [openRooms, setOpenRooms] = useState<RoomSummary[]>([]);
 
   const navigate = useNavigate();
   const { setRoom, setMySeat } = useGameStore();
 
-  // Listen for join errors while on the join tab
+  const refreshRooms = useCallback(() => {
+    getSocket().emit('room:list');
+  }, []);
+
   useEffect(() => {
     const socket = getSocket();
     function onError({ message }: { message: string }) {
       setJoinError(message);
       setJoining(false);
     }
+    function onRoomList({ rooms }: { rooms: RoomSummary[] }) {
+      setOpenRooms(rooms);
+    }
     socket.on('room:error', onError);
-    return () => { socket.off('room:error', onError); };
+    socket.on('room:list', onRoomList);
+    socket.on('room:list-updated', onRoomList);
+    return () => {
+      socket.off('room:error', onError);
+      socket.off('room:list', onRoomList);
+      socket.off('room:list-updated', onRoomList);
+    };
   }, []);
+
+  useEffect(() => { if (tab === 'join') refreshRooms(); }, [tab, refreshRooms]);
 
   function handleCreate() {
     if (!name.trim()) return;
@@ -82,11 +97,11 @@ export default function LobbyPage() {
     });
   }
 
-  function handleJoin() {
-    if (!name.trim() || code.length !== 6) return;
+  function handleJoin(roomCode: string) {
+    if (!name.trim()) return;
     setJoinError('');
     setJoining(true);
-    getSocket().emit('room:join', { roomCode: code.toUpperCase(), playerName: name.trim() });
+    getSocket().emit('room:join', { roomCode, playerName: name.trim() });
   }
 
   function handleBoardOnly() {
@@ -162,7 +177,7 @@ export default function LobbyPage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your name"
             maxLength={20}
-            onKeyDown={(e) => e.key === 'Enter' && (tab === 'ai' ? handleVsAI() : tab === 'create' ? handleCreate() : handleJoin())}
+            onKeyDown={(e) => e.key === 'Enter' && (tab === 'ai' ? handleVsAI() : tab === 'create' ? handleCreate() : undefined)}
           />
 
           {tab === 'ai' && (
@@ -358,24 +373,60 @@ export default function LobbyPage() {
 
           {tab === 'join' && (
             <>
-              <label>Room Code</label>
-              <input
-                value={code}
-                onChange={(e) => { setCode(e.target.value.toUpperCase()); setJoinError(''); }}
-                placeholder="6-letter code"
-                maxLength={6}
-                style={{ textTransform: 'uppercase', letterSpacing: '0.2em' }}
-                onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-              />
               {joinError && (
-                <p style={{ color: '#ef5350', fontSize: '0.85rem', margin: '-4px 0 0', fontWeight: 600 }}>
+                <p style={{ color: '#ef5350', fontSize: '0.85rem', margin: '0 0 4px', fontWeight: 600 }}>
                   ⚠️ {joinError}
                 </p>
               )}
-              <button className="btn-primary" style={{ width: '100%' }} onClick={handleJoin}
-                disabled={!name.trim() || code.length !== 6 || joining}>
-                {joining ? 'Joining…' : 'Join Room'}
-              </button>
+              {openRooms.length === 0 ? (
+                <div className={styles.noRooms}>
+                  <p>No open rooms right now.</p>
+                  <p style={{ opacity: 0.5, fontSize: '0.82rem' }}>
+                    Ask a friend to create one, then refresh.
+                  </p>
+                  <button className={styles.toggle} onClick={refreshRooms} style={{ marginTop: 8 }}>
+                    🔄 Refresh
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.roomList}>
+                  <div className={styles.roomListHeader}>
+                    <span>{openRooms.length} open room{openRooms.length !== 1 ? 's' : ''}</span>
+                    <button className={styles.refreshBtn} onClick={refreshRooms}>🔄</button>
+                  </div>
+                  {openRooms.map((room) => {
+                    const host = room.players.find((p) => p.isHost);
+                    const open = room.config.playerCount - room.players.length;
+                    const cfg = room.config;
+                    return (
+                      <div key={room.code} className={styles.roomCard}>
+                        <div className={styles.roomCardMain}>
+                          <span className={styles.roomHost}>{host?.name ?? '?'}</span>
+                          <span className={styles.roomSlots}>
+                            {room.players.length}/{room.config.playerCount} players
+                            <span className={styles.roomOpen}> · {open} spot{open !== 1 ? 's' : ''} open</span>
+                          </span>
+                          <div className={styles.roomBadges}>
+                            {cfg.mugginsEnabled && <span className={styles.badge}>Muggins</span>}
+                            {cfg.matchPlay && <span className={styles.badge}>Match</span>}
+                            {cfg.manualScoring && <span className={styles.badge}>Manual</span>}
+                            {cfg.stakesConfig?.enabled.length ? (
+                              <span className={styles.badge}>💰 Stakes</span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <button
+                          className={styles.joinBtn}
+                          disabled={!name.trim() || joining}
+                          onClick={() => handleJoin(room.code)}
+                        >
+                          {joining ? '…' : 'Join'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
         </div>

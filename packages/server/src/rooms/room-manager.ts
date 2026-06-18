@@ -168,4 +168,18 @@ export function markInGame(code: string): void {
   if (room) room.state = 'in-game';
 }
 
+export function getOpenRooms(): RoomSummary[] {
+  const cutoff = Date.now() - 3_600_000;
+  return Array.from(rooms.values())
+    .filter(
+      (r) =>
+        r.state === 'waiting' &&
+        r.config.mode === 'remote' &&
+        r.players.length < r.config.playerCount &&
+        r.createdAt > cutoff,
+    )
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map(toSummary);
+}
+
 export { toSummary };

@@ -138,3 +138,103 @@
   text-align: right;
   flex-shrink: 0;
 }
+
+/* ── Room browser ──────────────────────────────────────────────────────── */
+.noRooms {
+  text-align: center;
+  padding: 20px 0 8px;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.9rem;
+}
+
+.roomList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roomListHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  opacity: 0.5;
+  margin-bottom: 2px;
+}
+
+.refreshBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  color: inherit;
+}
+.refreshBtn:hover { background: rgba(255,255,255,0.1); }
+
+.roomCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  transition: border-color 0.15s;
+}
+.roomCard:hover { border-color: rgba(255,255,255,0.22); }
+
+.roomCardMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.roomHost {
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #fff;
+}
+
+.roomSlots {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.55);
+}
+
+.roomOpen {
+  color: #81c784;
+}
+
+.roomBadges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.badge {
+  font-size: 0.68rem;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.65);
+}
+
+.joinBtn {
+  padding: 6px 16px;
+  border-radius: 16px;
+  border: none;
+  background: #2e7d32;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.joinBtn:hover:not(:disabled) { background: #388e3c; }
+.joinBtn:disabled { opacity: 0.4; cursor: not-allowed; }

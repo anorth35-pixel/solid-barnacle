@@ -3,7 +3,7 @@ import type { GameConfig, PlayerSeat } from '@cribbgolf/shared';
 import type { Player } from '@cribbgolf/shared';
 import {
   createRoom, joinRoom, setReady, getRoomBySocket,
-  markInGame, removePlayer, toSummary,
+  markInGame, removePlayer, toSummary, getOpenRooms,
   disconnectPlayer, rejoinPlayer,
 } from '../rooms/room-manager.js';
 import { ServerGame } from '../game/server-game.js';
@@ -19,11 +19,16 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
 
   // ── Lobby ────────────────────────────────────────────────────────────────
 
+  socket.on('room:list', () => {
+    socket.emit('room:list', { rooms: getOpenRooms() });
+  });
+
   socket.on('room:create', ({ playerName, config }: { playerName: string; config: Partial<GameConfig> }) => {
     const room = createRoom(socket.id, playerName, config);
     socket.join(room.code);
     const token = room.players[0].sessionToken;
     socket.emit('room:created', { roomCode: room.code, room: toSummary(room), sessionToken: token });
+    io.emit('room:list-updated', { rooms: getOpenRooms() });
   });
 
   socket.on('room:join', ({ roomCode, playerName }: { roomCode: string; playerName: string }) => {
@@ -39,6 +44,7 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     const token = joinedPlayer.sessionToken;
     socket.emit('room:joined', { room: summary, yourSeat: seat, sessionToken: token });
     socket.to(room.code).emit('room:updated', { room: summary });
+    io.emit('room:list-updated', { rooms: getOpenRooms() });
   });
 
   socket.on('room:ready', ({ ready }: { ready: boolean }) => {
@@ -61,6 +67,7 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     if (!isVsAI && room.players.some((p) => !p.ready)) return;
 
     markInGame(room.code);
+    io.emit('room:list-updated', { rooms: getOpenRooms() });
 
     const humanPlayers = room.players.map((p) => ({
       id: p.socketId,
