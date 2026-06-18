@@ -125,25 +125,32 @@ export function useGameSocket() {
       store().setPendingDeclaration(data);
     });
 
-    socket.on('game:hand-score', ({ seat, breakdown, pegMovements, golfScores, hand, starterCard, isCrib }: any) => {
+    socket.on('game:hand-score', ({ seat, breakdown, pegMovements, golfScores, hand, starterCard }: any) => {
       store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
-      store().setCurrentScoringBreakdown(breakdown);
-      if (hand) store().setCurrentScoringHand({ handCards: hand, starterCard: starterCard ?? null, isCrib: false });
-      // Hold back golfScores — ScoringPhase commits them after the reveal feed finishes
-      if (golfScores) store().setPendingGolfScores(golfScores);
+      store().enqueueScoring({
+        breakdown,
+        golfScores: golfScores ?? [],
+        pegMovements: pegMovements ?? [],
+        hand: hand ?? [],
+        starterCard: starterCard ?? null,
+        isCrib: false,
+      });
       store().patchGameState({ phase: 'hand-scoring' });
-      if (pegMovements?.length) store().addPegMovements(pegMovements);
     });
 
-    socket.on('game:crib-score', ({ seat, breakdown, pegMovements, golfScores, hand, starterCard, isCrib }: any) => {
+    socket.on('game:crib-score', ({ seat, breakdown, pegMovements, golfScores, hand, starterCard }: any) => {
       store().setPendingDeclaration(null);
       store().addBreakdown(breakdown);
-      store().setCurrentScoringBreakdown(breakdown);
-      if (hand) store().setCurrentScoringHand({ handCards: hand, starterCard: starterCard ?? null, isCrib: true });
-      if (golfScores) store().setPendingGolfScores(golfScores);
+      store().enqueueScoring({
+        breakdown,
+        golfScores: golfScores ?? [],
+        pegMovements: pegMovements ?? [],
+        hand: hand ?? [],
+        starterCard: starterCard ?? null,
+        isCrib: true,
+      });
       store().patchGameState({ phase: 'crib-scoring' });
-      if (pegMovements?.length) store().addPegMovements(pegMovements);
     });
 
     socket.on('game:muggins-window', (data: any) => store().openMuggins(data));

@@ -35,6 +35,15 @@ export interface HolePopupData {
   emoji: string;
 }
 
+export interface ScoringQueueItem {
+  breakdown: ScoreBreakdown;
+  golfScores: PlayerGolfScore[];
+  pegMovements: PegMovement[];
+  hand: Card[];
+  starterCard: Card | null;
+  isCrib: boolean;
+}
+
 export interface GameStore {
   socketId: string;
   mySeat: PlayerSeat | null;
@@ -50,6 +59,7 @@ export interface GameStore {
   currentScoringBreakdown: ScoreBreakdown | null;
   currentScoringHand: { handCards: Card[]; starterCard: Card | null; isCrib: boolean } | null;
   pendingGolfScores: PlayerGolfScore[] | null;
+  scoringQueue: ScoringQueueItem[];
 
   pendingDeclaration: PendingDeclaration | null;
   mugginsWindow: { missedItems: any[]; windowCloseAt: number; scoringPlayerId: string } | null;
@@ -72,6 +82,8 @@ export interface GameStore {
   setCurrentScoringHand: (hand: { handCards: Card[]; starterCard: Card | null; isCrib: boolean } | null) => void;
   setPendingGolfScores: (scores: PlayerGolfScore[] | null) => void;
   commitPendingGolfScores: () => void;
+  enqueueScoring: (item: ScoringQueueItem) => void;
+  advanceScoringQueue: () => void;
   setPendingDeclaration: (d: PendingDeclaration | null) => void;
   openMuggins: (data: { missedItems: any[]; windowCloseAt: number; scoringPlayerId: string }) => void;
   closeMuggins: () => void;
@@ -99,6 +111,7 @@ const initialState = {
   currentScoringBreakdown: null,
   currentScoringHand: null,
   pendingGolfScores: null,
+  scoringQueue: [],
   mugginsWindow: null,
   disconnectedSeats: [],
   pendingHazardPopup: null,
@@ -116,7 +129,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setPendingPathChoice: (choice) => set({ pendingPathChoice: choice }),
   setRoom: (room, code) => set({ room, roomCode: code ?? room.code }),
   setGameState: (state) => {
-    set({ gameState: state, lastBreakdowns: [] });
+    set({
+      gameState: state,
+      lastBreakdowns: [],
+      scoringQueue: [],
+      currentScoringBreakdown: null,
+      currentScoringHand: null,
+      pendingGolfScores: null,
+    });
     const mySeat = get().mySeat;
     if (mySeat !== null && (state as any).golfScores?.[mySeat]) {
       const myGs = (state as any).golfScores[mySeat];
@@ -160,6 +180,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       gameState: { ...gameState, golfScores: pendingGolfScores },
       pendingGolfScores: null,
+    });
+  },
+
+  enqueueScoring: (item) => {
+    if (!get().currentScoringBreakdown) {
+      // Nothing showing — display immediately
+      set({
+        currentScoringBreakdown: item.breakdown,
+        currentScoringHand: { handCards: item.hand, starterCard: item.starterCard, isCrib: item.isCrib },
+        pendingGolfScores: item.golfScores.length > 0 ? item.golfScores : null,
+        lastPegMovements: item.pegMovements,
+      });
+    } else {
+      set((s) => ({ scoringQueue: [...s.scoringQueue, item] }));
+    }
+  },
+
+  advanceScoringQueue: () => {
+    const { scoringQueue } = get();
+    if (scoringQueue.length === 0) {
+      set({ currentScoringBreakdown: null, currentScoringHand: null });
+      return;
+    }
+    const [next, ...rest] = scoringQueue;
+    set({
+      scoringQueue: rest,
+      currentScoringBreakdown: next.breakdown,
+      currentScoringHand: { handCards: next.hand, starterCard: next.starterCard, isCrib: next.isCrib },
+      pendingGolfScores: next.golfScores.length > 0 ? next.golfScores : null,
+      lastPegMovements: next.pegMovements,
     });
   },
 

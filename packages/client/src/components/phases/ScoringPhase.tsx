@@ -16,6 +16,7 @@ export default function ScoringPhase({ breakdowns }: Props) {
     currentScoringBreakdown, currentScoringHand,
     commitPendingGolfScores, pendingGolfScores,
     setPendingPathChoice, lastPegMovements, triggerMovementAlerts,
+    advanceScoringQueue,
   } = useGameStore();
 
   const breakdown = currentScoringBreakdown ?? breakdowns[breakdowns.length - 1];
@@ -61,14 +62,14 @@ export default function ScoringPhase({ breakdowns }: Props) {
     if (revealedCount < items.length) setRevealedCount(items.length);
   }, [revealedCount, items.length]);
 
-  // Commit peg movement — apply scores then trigger hazard/hole popups
+  // Commit peg movement — apply scores, trigger alerts, then show next queued scoring
   const handleMovePeg = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     commitPendingGolfScores();
     setPegCommitted(true);
-    // gameState is updated synchronously by commit, so alerts can read fresh scores
     triggerMovementAlerts(lastPegMovements);
-  }, [commitPendingGolfScores, triggerMovementAlerts, lastPegMovements]);
+    advanceScoringQueue();
+  }, [commitPendingGolfScores, triggerMovementAlerts, lastPegMovements, advanceScoringQueue]);
 
   const runningTotal = items.slice(0, revealedCount).reduce((s, i) => s + i.points, 0);
 
