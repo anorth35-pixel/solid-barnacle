@@ -55,7 +55,6 @@ export function advancePeg(
     const nextPeghole = path.pegholes[nextIndex];
 
     remaining--;
-    score = { ...score, currentHoleStrokes: score.currentHoleStrokes + 1 };
 
     if (isHazard(nextPeghole) && remaining === 0 && !triggeredThisHole.has(nextIndex)) {
       triggeredThisHole.add(nextIndex);
@@ -68,13 +67,9 @@ export function advancePeg(
       movement.hazardsHit.push({ peghole: nextPeghole, result });
 
       const penaltyStrokes = result.penaltyStrokes;
-      totalPenaltyThisHole += Math.max(0, penaltyStrokes); // negatives tracked separately
-      if (penaltyStrokes < 0) {
-        // Lucky dice (advance3-strokeoff): apply the stroke credit immediately
-        score = { ...score, currentHoleStrokes: Math.max(0, score.currentHoleStrokes + penaltyStrokes) };
-      } else {
-        score = { ...score, currentHoleStrokes: score.currentHoleStrokes + penaltyStrokes };
-      }
+      // Track net penalty strokes (negative from lucky dice, positive from hazards)
+      totalPenaltyThisHole += penaltyStrokes;
+      score = { ...score, currentHoleStrokes: score.currentHoleStrokes + penaltyStrokes };
 
       hazardTypesThisHole.push(nextPeghole.type as PegholeType);
 
@@ -97,22 +92,22 @@ export function advancePeg(
     if (score.currentPegholeIndex >= path.pegholes.length - 1) {
       const cupHoleNumber = hole.number;
       const cuppedFromTee = startedFromTee && score.currentHole === actionStartHole;
-      const noLandedHazard = hazardTypesThisHole.filter((t) =>
-        t !== 'rough' && t !== 'trees' // trees/dice ok, only count stroke-adding hazards for birdie
-      ).length === 0;
 
-      // Birdie: started at tee of this hole AND completed it in this action with no penalty
+      // Birdie: started at tee of this hole AND completed it in this action with no net penalty
       const isBirdie = cuppedFromTee && totalPenaltyThisHole <= 0;
-      // Eagle: birdie AND consumed exactly all points (landed exactly on cup)
+      // Eagle: started at tee, landed EXACTLY on cup (remaining = 0), no net penalty
       const isEagle = isBirdie && remaining === 0;
-      // Double Eagle: eagle AND previous hole was also birdie-completed (tracked by caller if needed)
-      // We detect it here as: started from tee of previous hole, passed through that cup, now cupping next hole
+      // Double Eagle: eagle on this hole AND entered it during this same action (crossed from previous hole)
       const isDoubleEagle = isEagle && holeJustStarted && startedFromTee;
 
-      // Par: no penalty strokes regardless of peghole count
-      // (built in: if penaltyStrokes > 0, it can't be birdie anyway)
-
-      const finalStrokes = score.currentHoleStrokes;
+      // Scoring model:
+      //   Par = 0 penalty strokes (no hazard penalties, regardless of how many scoring events)
+      //   Birdie = −1 (completed whole hole in one scoring action from tee, no net penalty)
+      //   Eagle  = −2 (started at tee, landed exactly on cup, one action)
+      //   Double Eagle = −3 (eagle spanning two consecutive holes in one action)
+      //   Bogey+ = net positive penalty strokes from hazards
+      const birdieEagleBonus = isDoubleEagle ? -3 : isEagle ? -2 : isBirdie ? -1 : 0;
+      const netPenalty = score.currentHoleStrokes; // only hazard penalties remain (no advance counting)
 
       // Finishing bonus: first player to finish hole 18 gets −2 strokes
       let bonusAdjust = 0;
@@ -120,12 +115,13 @@ export function advancePeg(
         bonusAdjust = -2;
       }
 
+      const relToPar = netPenalty + birdieEagleBonus + bonusAdjust;
       const holeScore: HoleScore = {
         holeNumber: cupHoleNumber,
         par: hole.par,
-        strokes: finalStrokes + bonusAdjust,
-        relativeToPar: finalStrokes + bonusAdjust - hole.par,
-        penaltyStrokes: Math.max(0, totalPenaltyThisHole),
+        strokes: hole.par + relToPar,
+        relativeToPar: relToPar,
+        penaltyStrokes: Math.max(0, netPenalty),
         hazardTypes: hazardTypesThisHole,
         isBirdie,
         isEagle,
