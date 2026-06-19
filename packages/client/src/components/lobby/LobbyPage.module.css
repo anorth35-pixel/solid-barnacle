@@ -139,6 +139,69 @@
   flex-shrink: 0;
 }
 
+/* ── Name combo ────────────────────────────────────────────────────────── */
+.nameCombo {
+  position: relative;
+  display: flex;
+}
+
+.nameCombo input {
+  flex: 1;
+  border-radius: var(--radius) 0 0 var(--radius) !important;
+  border-right: none !important;
+}
+
+.nameDropdownBtn {
+  padding: 0 12px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-left: none;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  cursor: pointer;
+  font-size: 1rem;
+  color: rgba(255,255,255,0.65);
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.nameDropdownBtn:hover { background: rgba(255,255,255,0.15); }
+
+.nameDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #1e2e1e;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+  z-index: 200;
+  overflow: hidden;
+}
+
+.nameOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  transition: background 0.1s;
+}
+.nameOption:hover { background: rgba(255,255,255,0.08); }
+
+.nameRemove {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.3);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.nameRemove:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1); }
+
 /* ── Room browser ──────────────────────────────────────────────────────── */
 .noRooms {
   text-align: center;

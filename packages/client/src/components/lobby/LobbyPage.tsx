@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getSocket } from '../../socket/socket-client.js';
 import { useGameStore } from '../../store/game-store.js';
@@ -16,9 +16,20 @@ const ALL_STAKES: { id: StakeType; label: string; desc: string }[] = [
 
 type Tab = 'create' | 'join' | 'ai' | 'board';
 
+const NAMES_KEY = 'cribbgolf-names';
+const LAST_NAME_KEY = 'cribbgolf-name';
+
+function loadSavedNames(): string[] {
+  try { return JSON.parse(localStorage.getItem(NAMES_KEY) ?? '[]'); }
+  catch { return []; }
+}
+
 export default function LobbyPage() {
   const [tab, setTab] = useState<Tab>('ai');
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => localStorage.getItem(LAST_NAME_KEY) ?? '');
+  const [savedNames, setSavedNames] = useState<string[]>(loadSavedNames);
+  const [showNameDropdown, setShowNameDropdown] = useState(false);
+  const nameComboRef = useRef<HTMLDivElement>(null);
   const [playerCount, setPlayerCount] = useState<2 | 3>(2);
   const [muggins, setMuggins] = useState(true);
   const [manualScoring, setManualScoring] = useState(false);
@@ -82,8 +93,33 @@ export default function LobbyPage() {
 
   useEffect(() => { if (tab === 'join') refreshRooms(); }, [tab, refreshRooms]);
 
+  useEffect(() => {
+    if (!showNameDropdown) return;
+    function handleOutside(e: MouseEvent) {
+      if (!nameComboRef.current?.contains(e.target as Node)) setShowNameDropdown(false);
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [showNameDropdown]);
+
+  function saveName(n: string) {
+    if (!n) return;
+    const next = [n, ...savedNames.filter((s) => s !== n)].slice(0, 8);
+    setSavedNames(next);
+    localStorage.setItem(NAMES_KEY, JSON.stringify(next));
+    localStorage.setItem(LAST_NAME_KEY, n);
+  }
+
+  function removeSavedName(n: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    const next = savedNames.filter((s) => s !== n);
+    setSavedNames(next);
+    localStorage.setItem(NAMES_KEY, JSON.stringify(next));
+  }
+
   function handleCreate() {
     if (!name.trim()) return;
+    saveName(name.trim());
     const config: Partial<GameConfig> = {
       playerCount, mugginsEnabled: muggins, manualScoring, mode: 'remote',
       matchPlay,
@@ -99,6 +135,7 @@ export default function LobbyPage() {
 
   function handleJoin(roomCode: string) {
     if (!name.trim()) return;
+    saveName(name.trim());
     setJoinError('');
     setJoining(true);
     getSocket().emit('room:join', { roomCode, playerName: name.trim() });
@@ -106,6 +143,7 @@ export default function LobbyPage() {
 
   function handleBoardOnly() {
     if (!name.trim() || boardPlayerNames.some(n => !n.trim())) return;
+    saveName(name.trim());
     const allNames = [name.trim(), ...boardPlayerNames.slice(0, boardPlayerCount - 1).map(n => n.trim())];
     const config: Partial<GameConfig> = {
       playerCount: boardPlayerCount,
@@ -124,6 +162,7 @@ export default function LobbyPage() {
 
   function handleVsAI() {
     if (!name.trim()) return;
+    saveName(name.trim());
     const totalPlayers = (1 + aiCount) as 2 | 3;
     const config: Partial<GameConfig> = {
       playerCount: totalPlayers,
@@ -172,13 +211,41 @@ export default function LobbyPage() {
 
         <div className={styles.form}>
           <label>Your Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name"
-            maxLength={20}
-            onKeyDown={(e) => e.key === 'Enter' && (tab === 'ai' ? handleVsAI() : tab === 'create' ? handleCreate() : undefined)}
-          />
+          <div className={styles.nameCombo} ref={nameComboRef}>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your name"
+              maxLength={20}
+              onKeyDown={(e) => e.key === 'Enter' && (tab === 'ai' ? handleVsAI() : tab === 'create' ? handleCreate() : undefined)}
+            />
+            {savedNames.length > 0 && (
+              <button
+                type="button"
+                className={styles.nameDropdownBtn}
+                onClick={() => setShowNameDropdown((v) => !v)}
+                title="Saved names"
+              >▾</button>
+            )}
+            {showNameDropdown && (
+              <div className={styles.nameDropdown}>
+                {savedNames.map((n) => (
+                  <div
+                    key={n}
+                    className={styles.nameOption}
+                    onClick={() => { setName(n); setShowNameDropdown(false); }}
+                  >
+                    <span>{n}</span>
+                    <button
+                      type="button"
+                      className={styles.nameRemove}
+                      onClick={(e) => removeSavedName(n, e)}
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {tab === 'ai' && (
             <>
