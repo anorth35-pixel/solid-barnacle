@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '../../store/game-store.js';
 import { getSocket } from '../../socket/socket-client.js';
@@ -7,11 +6,8 @@ import type { Card } from '@cribbgolf/shared';
 import { canPlayCard } from '@cribbgolf/shared';
 import styles from './PeggingPhase.module.css';
 
-const PLAYER_COLORS = ['#1565c0', '#c62828', '#2e7d32'];
-
 export default function PeggingPhase() {
   const { myHand, gameState, mySeat } = useGameStore();
-  const [scorePopup, setScorePopup] = useState<string | null>(null);
 
   if (!gameState) return null;
   const { pegging, activePlayerSeat, players } = gameState;
@@ -22,13 +18,9 @@ export default function PeggingPhase() {
     (c) => !myPlayer?.playedCards.some((p) => p.id === c.id),
   );
 
-  const deadPiles = players
-    .map((p) => ({
-      name: p.name,
-      seat: p.seat as number,
-      cards: p.playedCards.filter((c) => !pegging.playStack.some((s) => s.id === c.id)),
-    }))
-    .filter((pile) => pile.cards.length > 0);
+  const deadCards = players.flatMap((p) =>
+    p.playedCards.filter((c) => !pegging.playStack.some((s) => s.id === c.id)),
+  );
 
   function playCard(card: Card) {
     if (!isMyTurn || !canPlayCard(card, pegging.runningCount)) return;
@@ -49,22 +41,12 @@ export default function PeggingPhase() {
         <span className={styles.countOf}> / 31</span>
       </div>
 
-      {deadPiles.length > 0 && (
-        <div>
-          <p className={styles.deadLabel}>Played</p>
-          {deadPiles.map((pile) => (
-            <div key={pile.seat} className={styles.deadPileRow}>
-              <span
-                className={styles.deadPileOwner}
-                style={{ color: PLAYER_COLORS[pile.seat] ?? '#ccc' }}
-              >
-                {pile.name}
-              </span>
-              <div className={styles.deadPile}>
-                {pile.cards.map((card) => (
-                  <CardComponent key={card.id} card={card} small />
-                ))}
-              </div>
+      {deadCards.length > 0 && (
+        <div className={styles.deadRow}>
+          <span className={styles.deadLabel}>Played</span>
+          {deadCards.map((card) => (
+            <div key={card.id} className={styles.deadCardWrap}>
+              <CardComponent card={card} />
             </div>
           ))}
         </div>
