@@ -185,12 +185,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   enqueueScoring: (item) => {
     if (!get().currentScoringBreakdown) {
-      // Nothing showing — display immediately
+      // Nothing showing — display immediately; dismiss any hazard/hole popups so they don't block
       set({
         currentScoringBreakdown: item.breakdown,
         currentScoringHand: { handCards: item.hand, starterCard: item.starterCard, isCrib: item.isCrib },
         pendingGolfScores: item.golfScores.length > 0 ? item.golfScores : null,
         lastPegMovements: item.pegMovements,
+        pendingHazardPopup: null,
+        pendingHolePopup: null,
       });
     } else {
       set((s) => ({ scoringQueue: [...s.scoringQueue, item] }));
@@ -204,12 +206,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
     const [next, ...rest] = scoringQueue;
+    // Dismiss hazard/hole popups when advancing to next scoring event
     set({
       scoringQueue: rest,
       currentScoringBreakdown: next.breakdown,
       currentScoringHand: { handCards: next.hand, starterCard: next.starterCard, isCrib: next.isCrib },
       pendingGolfScores: next.golfScores.length > 0 ? next.golfScores : null,
       lastPegMovements: next.pegMovements,
+      pendingHazardPopup: null,
+      pendingHolePopup: null,
     });
   },
 

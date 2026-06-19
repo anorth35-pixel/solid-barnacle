@@ -169,6 +169,7 @@ export function useGameSocket() {
     });
 
     socket.on('game:path-chosen', ({ golfScores }: any) => {
+      store().setPendingPathChoice(null); // Always close dialog on server confirmation
       // During scoring reveal, path-chosen updates the held pendingGolfScores
       // so ScoringPhase can detect the choice is done and show "Move Peg"
       if (store().pendingGolfScores) {
