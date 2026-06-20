@@ -97,8 +97,9 @@ export function advancePeg(
       const isBirdie = cuppedFromTee && totalPenaltyThisHole <= 0;
       // Eagle: started at tee, landed EXACTLY on cup (remaining = 0), no net penalty
       const isEagle = isBirdie && remaining === 0;
-      // Double Eagle: eagle on this hole AND entered it during this same action (crossed from previous hole)
-      const isDoubleEagle = isEagle && holeJustStarted && startedFromTee;
+      // Double Eagle: action started from tee of a previous hole, entered this hole mid-action,
+      // and landed exactly on the cup with no net penalty on this hole.
+      const isDoubleEagle = startedFromTee && holeJustStarted && remaining === 0 && totalPenaltyThisHole <= 0;
 
       // Scoring model:
       //   Par = 0 penalty strokes (no hazard penalties, regardless of how many scoring events)

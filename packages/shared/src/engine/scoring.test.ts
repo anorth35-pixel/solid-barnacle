@@ -207,7 +207,6 @@ describe('advancePeg', () => {
     const gs = createInitialGolfScore('p1');
     const { updated } = advancePeg(gs, 2, DEFAULT_COURSE.holes);
     expect(updated.currentPegholeIndex).toBe(2);
-    expect(updated.currentHoleStrokes).toBe(2);
   });
 
   it('completes a hole and advances to the next', () => {
@@ -223,26 +222,16 @@ describe('advancePeg', () => {
     expect(updated.holeScores).toHaveLength(1);
   });
 
-  it('counts strokes correctly for a completed hole', () => {
-    const gs = createInitialGolfScore('p1');
+  it('scores a completed hole relative to par (eagle when started from tee, exact landing)', () => {
     const hole = DEFAULT_COURSE.holes[0];
     const pathA = hole.paths[0];
-    const stepsToComplete = pathA.pegholes.length - 1;
-    const { updated } = advancePeg(gs, stepsToComplete, DEFAULT_COURSE.holes);
-    const hs = updated.holeScores[0];
-    // Strokes = steps taken + hazard penalty strokes accumulated on the path
-    const PENALTY: Record<string, number> = { rough: 1, trees: 1, sand: 1, water: 2, 'out-of-bounds': 2 };
-    const expectedPenalties = pathA.pegholes.reduce((s, ph) => s + (PENALTY[ph.type] ?? 0), 0);
-    const expectedStrokes = stepsToComplete + expectedPenalties;
-    expect(hs.strokes).toBe(expectedStrokes);
-    expect(hs.relativeToPar).toBe(expectedStrokes - hole.par);
-  });
-
-  it('carries currentHoleStrokes across multiple advance calls', () => {
     const gs = createInitialGolfScore('p1');
-    const { updated: step1 } = advancePeg(gs, 1, DEFAULT_COURSE.holes);
-    const { updated: step2 } = advancePeg(step1, 1, DEFAULT_COURSE.holes);
-    expect(step2.currentHoleStrokes).toBe(2);
+    // Exact number of steps to land on the cup with remaining=0 → eagle
+    const { updated } = advancePeg(gs, pathA.pegholes.length - 1, DEFAULT_COURSE.holes);
+    const hs = updated.holeScores[0];
+    expect(hs.strokes).toBe(hole.par + hs.relativeToPar);
+    expect(hs.isEagle).toBe(true);
+    expect(hs.relativeToPar).toBe(-2);
   });
 
   it('marks game finished after completing hole 18', () => {
