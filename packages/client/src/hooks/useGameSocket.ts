@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { connectSocket, getSocket } from '../socket/socket-client.js';
 import { useGameStore } from '../store/game-store.js';
@@ -6,6 +6,9 @@ import { getGolfTermForScore } from '@cribbgolf/shared';
 
 export function useGameSocket() {
   const navigate = useNavigate();
+  // Holds a phase-change event that arrived while scoring was still active.
+  // Applied once the scoring queue empties so the user sees their scores first.
+  const pendingNextRoundRef = useRef<{ phase: string; state: any } | null>(null);
 
   useEffect(() => {
     const socket = connectSocket();
@@ -38,6 +41,16 @@ export function useGameSocket() {
     socket.on('room:error', ({ message }: any) => store().setError(message));
 
     socket.on('game:phase-change', ({ phase, state }: any) => {
+      const { currentScoringBreakdown, scoringQueue } = store();
+      const hasPendingScoring = currentScoringBreakdown != null || scoringQueue.length > 0;
+
+      if (hasPendingScoring) {
+        // Scoring is still in progress — buffer this so the user can read their scores.
+        // The second useEffect below applies it once the queue empties.
+        pendingNextRoundRef.current = { phase, state };
+        return;
+      }
+
       store().setGameState(state);
       if (phase === 'discarding') {
         // Sync myHand from server state directly in case game:dealt arrives late or is missed
@@ -312,6 +325,29 @@ export function useGameSocket() {
       socket.off('game:rejoined');
     };
   }, []);
+
+  // Once the scoring queue empties, apply any next-round state that was buffered
+  // while the user was reading their hand/crib scores.
+  const currentScoringBreakdown = useGameStore((s) => s.currentScoringBreakdown);
+  const scoringQueueLength = useGameStore((s) => s.scoringQueue.length);
+
+  useEffect(() => {
+    if (currentScoringBreakdown != null || scoringQueueLength > 0) return;
+    if (!pendingNextRoundRef.current) return;
+
+    const { phase, state } = pendingNextRoundRef.current;
+    pendingNextRoundRef.current = null;
+
+    const s = useGameStore.getState();
+    s.setGameState(state);
+    if (phase === 'discarding') {
+      const mySeat = s.mySeat;
+      if (mySeat !== null && state.players?.[mySeat]?.hand?.length > 0) {
+        s.setMyHand(state.players[mySeat].hand);
+      }
+      navigate(`/game/${state.id}`);
+    }
+  }, [currentScoringBreakdown, scoringQueueLength, navigate]);
 
   return getSocket();
 }

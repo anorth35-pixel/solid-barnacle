@@ -12,14 +12,19 @@
 #   0: 2-player, stroke play, no muggins
 #   1: 2-player, stroke play, muggins ON
 #   2: 2-player, match play
-#   3: 2-player, stroke play + all stakes (skins/sandies/barkies/greenies)
-#   4: 3-player, stroke play, no muggins
-#   5: 3-player, stroke play, muggins ON
+#   3: 2-player, all stakes (skins/nassau/sandies/barkies/greenies)
+#   4: 2-player, skins only
+#   5: 2-player, nassau only
+#   6: 2-player, side bets (sandies/barkies/greenies)
+#   7: 2-player, skins + muggins
+#   8: 3-player, stroke play, no muggins
+#   9: 3-player, stroke play, muggins ON
+#  10: 3-player, all stakes (skins/sandies/barkies/greenies)
 
 set -uo pipefail
 
 SERVER=${1:?"Usage: $0 <server-url> [reps-per-config]"}
-REPS=${2:-5}   # games per config (6 configs × REPS games total)
+REPS=${2:-5}   # games per config (11 configs × REPS games total)
 TIMEOUT=300    # seconds per game before watchdog kills it
 
 LOG_DIR="scripts/logs/$(date +%Y%m%d-%H%M%S)"
@@ -35,9 +40,14 @@ CONFIGS=(
   "0:2p-stroke:2"
   "1:2p-muggins:2"
   "2:2p-matchplay:2"
-  "3:2p-stakes:2"
-  "4:3p-stroke:3"
-  "5:3p-muggins:3"
+  "3:2p-all-stakes:2"
+  "4:2p-skins:2"
+  "5:2p-nassau:2"
+  "6:2p-sidebets:2"
+  "7:2p-skins-muggins:2"
+  "8:3p-stroke:3"
+  "9:3p-muggins:3"
+  "10:3p-all-stakes:3"
 )
 
 echo "══════════════════════════════════════════════════"

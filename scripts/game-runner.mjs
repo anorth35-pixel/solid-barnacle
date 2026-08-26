@@ -39,27 +39,61 @@ if (!args.server || !args.name) {
 // ── Config rotation ───────────────────────────────────────────────────────────
 // Creator rotates through these; joiner picks up whatever room it finds.
 
+const ALL_UNIT_VALUES = { skins: 1, nassau: 1, sandies: 1, barkies: 1, greenies: 1 };
+
 const CONFIGS = [
-  // ── 2-player ─────────────────────────────────────────────────────────────
+  // ── 2-player: core modes ──────────────────────────────────────────────────
+  // 0: stroke play, no muggins
   { playerCount: 2, mode: 'remote', matchPlay: false,
     mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false },
 
+  // 1: stroke play, muggins ON
   { playerCount: 2, mode: 'remote', matchPlay: false,
     mugginsEnabled: true,  mugginsWindowMs: 4000, manualScoring: false },
 
+  // 2: match play
   { playerCount: 2, mode: 'remote', matchPlay: true,
     mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false },
 
+  // ── 2-player: stakes combinations ────────────────────────────────────────
+  // 3: all stakes enabled
   { playerCount: 2, mode: 'remote', matchPlay: false,
     mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false,
-    stakesConfig: { enabled: ['skins', 'sandies', 'barkies', 'greenies'] } },
+    stakesConfig: { enabled: ['skins', 'nassau', 'sandies', 'barkies', 'greenies'], unitValues: ALL_UNIT_VALUES } },
 
-  // ── 3-player ─────────────────────────────────────────────────────────────
+  // 4: skins only
+  { playerCount: 2, mode: 'remote', matchPlay: false,
+    mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false,
+    stakesConfig: { enabled: ['skins'], unitValues: { skins: 2 } } },
+
+  // 5: nassau only
+  { playerCount: 2, mode: 'remote', matchPlay: false,
+    mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false,
+    stakesConfig: { enabled: ['nassau'], unitValues: { nassau: 5 } } },
+
+  // 6: side bets only (sandies + barkies + greenies)
+  { playerCount: 2, mode: 'remote', matchPlay: false,
+    mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false,
+    stakesConfig: { enabled: ['sandies', 'barkies', 'greenies'], unitValues: { sandies: 1, barkies: 1, greenies: 1 } } },
+
+  // 7: skins + muggins
+  { playerCount: 2, mode: 'remote', matchPlay: false,
+    mugginsEnabled: true, mugginsWindowMs: 4000, manualScoring: false,
+    stakesConfig: { enabled: ['skins', 'sandies'], unitValues: { skins: 1, sandies: 1 } } },
+
+  // ── 3-player ──────────────────────────────────────────────────────────────
+  // 8: stroke play, no muggins
   { playerCount: 3, mode: 'remote', matchPlay: false,
     mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false },
 
+  // 9: stroke play, muggins ON
   { playerCount: 3, mode: 'remote', matchPlay: false,
     mugginsEnabled: true,  mugginsWindowMs: 4000, manualScoring: false },
+
+  // 10: 3-player all stakes
+  { playerCount: 3, mode: 'remote', matchPlay: false,
+    mugginsEnabled: false, mugginsWindowMs: 4000, manualScoring: false,
+    stakesConfig: { enabled: ['skins', 'sandies', 'barkies', 'greenies'], unitValues: { skins: 1, sandies: 1, barkies: 1, greenies: 1 } } },
 ];
 
 const gameConfig = CONFIGS[parseInt(args.config) % CONFIGS.length];

@@ -22,7 +22,7 @@ export interface HazardPopupData {
   hazardType: string;
   penaltyStrokes: number;
   diceRoll?: [number, number];
-  diceOutcome?: 'advance1' | 'stay-penalty' | 'advance3-strokeoff';
+  diceOutcome?: 'advance1' | 'advance2-doubles' | 'fail-penalty';
   description: string;
 }
 
