@@ -258,6 +258,13 @@ socket.on('game:dealt', ({ yourHand, dealerSeat: ds }) => {
   myHand     = yourHand;
   dealerSeat = ds;
   log(`Dealt ${myHand.length} cards  dealer=seat${ds}`);
+  // Discard here instead of on phase-change — game:dealt arrives AFTER game:phase-change
+  // so myHand is empty when phase-change fires.
+  const toDiscard = pickDiscardIds(myHand);
+  // Remove discarded cards from hand now so pegging uses only the 4 kept cards.
+  myHand = myHand.filter(c => !toDiscard.includes(c.id));
+  log(`Discarding ${toDiscard.length} card(s) — keeping ${myHand.length}`);
+  setTimeout(() => socket.emit('game:discard', { cardIds: toDiscard }), 200 + Math.random() * 400);
 });
 
 socket.on('game:phase-change', ({ phase: newPhase, state }) => {
@@ -272,12 +279,6 @@ socket.on('game:phase-change', ({ phase: newPhase, state }) => {
   log(`Phase → ${newPhase}${activePlayerSeat !== null ? `  active=seat${activePlayerSeat}` : ''}`);
 
   switch (newPhase) {
-    case 'discarding': {
-      const toDiscard = pickDiscardIds(myHand);
-      log(`Discarding ${toDiscard.length} card(s)`);
-      setTimeout(() => socket.emit('game:discard', { cardIds: toDiscard }), 200 + Math.random() * 400);
-      break;
-    }
     case 'cutting': {
       const poneSeat = (state.dealerSeat + 1) % playerCount;
       if (mySeat === poneSeat) {
