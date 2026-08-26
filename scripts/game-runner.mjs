@@ -119,6 +119,7 @@ let playerCount   = gameConfig.playerCount;
 let activePlayerSeat = null;
 let dealerSeat    = 0;
 let joinedRoom    = false;
+let currentRunningCount = 0;
 
 // ── Decision helpers ──────────────────────────────────────────────────────────
 
@@ -289,7 +290,8 @@ socket.on('game:phase-change', ({ phase: newPhase, state }) => {
       break;
     }
     case 'pegging':
-      maybePlayCard(state?.pegging?.runningCount ?? 0);
+      currentRunningCount = state?.pegging?.runningCount ?? 0;
+      maybePlayCard(currentRunningCount);
       break;
   }
 
@@ -297,17 +299,19 @@ socket.on('game:phase-change', ({ phase: newPhase, state }) => {
 });
 
 socket.on('game:card-played', ({ seat, card, runningCount, activePlayerSeat: next, golfScores }) => {
+  currentRunningCount = runningCount;
   activePlayerSeat = next;
   if (seat === mySeat) removeFromHand(card.id);
   if (golfScores) checkAndChoosePath(golfScores);
-  if (next === mySeat) maybePlayCard(runningCount);
+  if (next === mySeat) maybePlayCard(currentRunningCount);
 });
 
 socket.on('game:go-called', ({ seat, countReset, activePlayerSeat: next, golfScores }) => {
+  if (countReset) currentRunningCount = 0;
   activePlayerSeat = next;
   log(`Seat ${seat} called Go${countReset ? '  (count reset)' : ''}`);
   if (golfScores) checkAndChoosePath(golfScores);
-  if (next === mySeat) maybePlayCard(0);
+  if (next === mySeat) maybePlayCard(currentRunningCount);
 });
 
 socket.on('game:starter', ({ card, golfScores }) => {
