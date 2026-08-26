@@ -236,7 +236,7 @@ describe('advancePeg', () => {
 
   it('marks game finished after completing hole 18', () => {
     const gs = createInitialGolfScore('p1');
-    const farGs = { ...gs, currentHole: 18, holesCompleted: 17, holeScores: [], selectedPaths: { 18: 'A' } };
+    const farGs = { ...gs, currentHole: 18, holesCompleted: 17, holeScores: [], selectedPaths: { 18: 'LR' } };
     const hole18 = DEFAULT_COURSE.holes[17];
     const pathA = hole18.paths[0];
     const { updated } = advancePeg(farGs, pathA.pegholes.length, DEFAULT_COURSE.holes);

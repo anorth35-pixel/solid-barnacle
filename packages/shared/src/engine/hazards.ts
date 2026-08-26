@@ -8,69 +8,63 @@ function rollDice(): [number, number] {
 }
 
 /**
- * Apply dice-based hazard for sand, rough, and three-putt.
+ * Up-and-down dice check (Water, Rough, Sand, Three-putt).
  *
- * Dice outcomes (sum of 2d6):
- *   2–4  → advance3: move forward 3 pegholes, −1 stroke (lucky!)
- *   5–9  → stay-penalty: stay here, +1 stroke
- *   10–12 → advance1: move forward 1 peghole normally, no penalty
+ * MAKE: par appears on either die, OR sum of dice equals par.
+ *   - Advance 1 peghole.
+ *   - Advance 2 pegholes on doubles of par (e.g., 3+3 on a par-3 hole).
  *
- * advanceBonus is relative to the base +1 advance that was already consumed:
- *   advance1    → advanceBonus 0 (no extra, just the base step)
- *   stay-penalty → advanceBonus -1 (undo the base step, stay put; +1 penalty)
- *   advance3    → advanceBonus +2 (two more steps beyond the base step)
+ * FAIL: neither condition met.
+ *   - Water:       +1 stroke, retreat 1 peghole.
+ *   - Rough/Sand:  +1 stroke, peg stays.
  */
-function diceHazard(currentIndex: number, dice: [number, number]): HazardResult {
-  const sum = dice[0] + dice[1];
-  if (sum <= 4) {
-    // Lucky roll: advance 3 total, no penalty stroke, −1 stroke credited
-    return {
-      penaltyStrokes: -1,
-      retreatToIndex: null,
-      advanceBonus: 2,
-      diceRoll: dice,
-      diceOutcome: 'advance3-strokeoff',
-      description: `Dice ${dice[0]}+${dice[1]}=${sum} — Lucky! Advance 3, −1 stroke`,
-    };
-  }
-  if (sum >= 10) {
-    // Good roll: advance 1, no penalty
+function diceHazard(
+  peghole: Peghole,
+  currentIndex: number,
+  par: number,
+  dice: [number, number],
+): HazardResult {
+  const [d1, d2] = dice;
+  const sum = d1 + d2;
+  const makeUpAndDown = d1 === par || d2 === par || sum === par;
+
+  if (makeUpAndDown) {
+    const doublesOfPar = d1 === d2 && d1 === par;
+    const advanceBonus = doublesOfPar ? 1 : 0;
     return {
       penaltyStrokes: 0,
       retreatToIndex: null,
-      advanceBonus: 0,
+      advanceBonus,
       diceRoll: dice,
-      diceOutcome: 'advance1',
-      description: `Dice ${dice[0]}+${dice[1]}=${sum} — Advance 1, no penalty`,
+      diceOutcome: doublesOfPar ? 'advance2-doubles' : 'advance1',
+      description: `Dice ${d1}+${d2}=${sum} — Made the up-and-down! Advance ${doublesOfPar ? 2 : 1}`,
     };
   }
-  // Bad roll: stay put (+1 penalty). Retreat to stay at current position.
+
+  const isWater = peghole.type === 'water';
   return {
     penaltyStrokes: 1,
-    retreatToIndex: currentIndex,
+    retreatToIndex: isWater ? Math.max(0, currentIndex - 1) : currentIndex,
     advanceBonus: 0,
     diceRoll: dice,
-    diceOutcome: 'stay-penalty',
-    description: `Dice ${dice[0]}+${dice[1]}=${sum} — Stay here, +1 penalty stroke`,
+    diceOutcome: 'fail-penalty',
+    description: `Dice ${d1}+${d2}=${sum} — Missed! +1 stroke${isWater ? ', retreat 1 peghole' : ', peg stays'}`,
   };
 }
 
 /**
- * applyHazard returns the penalty for landing on a hazard peghole.
+ * applyHazard returns the result of landing on a hazard peghole.
  *
- * Real CribbGolf rules:
- *   trees       — no penalty, retreat 2 pegholes
- *   water       — +1 penalty stroke, retreat 1 peghole
- *   out-of-bounds — +2 penalty strokes, retreat to action start (caller supplies actionStartIndex)
- *   sand        — roll 2d6: advance3/−1, or advance1/0, or stay/+1
- *   rough       — same dice mechanic as sand
- *   three-putt  — same dice mechanic, on the green approach
+ * trees         — retreat 2 pegholes, no penalty stroke (immediate, no dice)
+ * out-of-bounds — +2 penalty strokes, retreat to tee (immediate, no dice)
+ * water         — roll 2d6 up-and-down check; fail = +1/retreat 1
+ * rough/sand    — roll 2d6 up-and-down check; fail = +1/stay
  */
 export function applyHazard(
   peghole: Peghole,
   currentIndex: number,
-  actionStartIndex: number,
-  diceOverride?: [number, number],  // for deterministic tests
+  par: number,
+  diceOverride?: [number, number],
 ): HazardResult {
   switch (peghole.type) {
     case 'trees':
@@ -81,27 +75,20 @@ export function applyHazard(
         description: 'Trees — retreat 2 pegholes, no penalty stroke',
       };
 
-    case 'water':
-      return {
-        penaltyStrokes: 1,
-        retreatToIndex: Math.max(0, currentIndex - 1),
-        advanceBonus: 0,
-        description: 'Water hazard — +1 penalty stroke, retreat 1 peghole',
-      };
-
     case 'out-of-bounds':
       return {
         penaltyStrokes: 2,
-        retreatToIndex: actionStartIndex,
+        retreatToIndex: 0,
         advanceBonus: 0,
-        description: 'Out of bounds — +2 penalty strokes, return to where scoring action started',
+        description: 'Out of bounds — +2 penalty strokes, back to tee',
       };
 
+    case 'water':
     case 'sand':
     case 'rough':
     case 'three-putt': {
       const dice = diceOverride ?? rollDice();
-      return diceHazard(currentIndex, dice);
+      return diceHazard(peghole, currentIndex, par, dice);
     }
 
     default:

@@ -602,7 +602,7 @@ function HoleTrackPane({ playerName, golfScore, course, isMe, color, onChoosePat
     if (hIdx < 0 || hIdx >= course.holes.length) return;
     const W = holeWidths[hIdx];
     const selectedPath = course.holes[hIdx].paths.find(
-      p => p.id === (selectedPaths[golfScore.currentHole] ?? 'A')
+      p => p.id === (selectedPaths[golfScore.currentHole] ?? 'LR')
     ) ?? course.holes[hIdx].paths[0];
     const n = selectedPath.pegholes.length;
     const t = n <= 1 ? 0 : golfScore.currentPegholeIndex / (n - 1);
@@ -643,7 +643,7 @@ function HoleTrackPane({ playerName, golfScore, course, isMe, color, onChoosePat
               <HoleSVG
                 key={hole.number}
                 hole={hole}
-                selectedPathId={selectedPaths[hole.number] ?? 'A'}
+                selectedPathId={selectedPaths[hole.number] ?? 'LR'}
                 pegIndex={isCurrentHole ? golfScore.currentPegholeIndex : null}
                 playerColor={color}
                 holeRelativeToPar={hs?.relativeToPar}

@@ -58,12 +58,7 @@ export function advancePeg(
 
     if (isHazard(nextPeghole) && remaining === 0 && !triggeredThisHole.has(nextIndex)) {
       triggeredThisHole.add(nextIndex);
-      const result = applyHazard(
-        nextPeghole,
-        nextIndex,
-        // OOB retreats to action-start within the current hole
-        actionStartHole === score.currentHole ? actionStartIndex : 0,
-      );
+      const result = applyHazard(nextPeghole, nextIndex, hole.par);
       movement.hazardsHit.push({ peghole: nextPeghole, result });
 
       const penaltyStrokes = result.penaltyStrokes;
@@ -143,10 +138,10 @@ export function advancePeg(
         holesCompleted: score.holesCompleted + 1,
         currentHoleStrokes: 0,
         currentPegholeIndex: 0,
-        currentPathId: 'A',
+        currentPathId: 'LR',
         selectedPaths: finished
           ? score.selectedPaths
-          : { ...score.selectedPaths, [nextHoleNum]: score.selectedPaths[nextHoleNum] ?? 'A' },
+          : { ...score.selectedPaths, [nextHoleNum]: score.selectedPaths[nextHoleNum] ?? 'LR' },
         pendingPathChoiceHole: finished ? null : nextHoleNum,
         isFinished: finished,
         currentHole: finished ? 18 : nextHoleNum,

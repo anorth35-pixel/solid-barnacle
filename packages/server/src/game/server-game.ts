@@ -10,6 +10,7 @@ import {
   createPeggingState, canPlayCard, hasPlayableCard, resetPeggingCount, allHandsEmpty,
   createInitialGolfScore, DEFAULT_COURSE,
   advancePeg,
+  holesNotCompletedPenalty,
   createInitialStakesState,
 } from '@cribbgolf/shared';
 import { MUGGINS_WINDOW_MS } from '../config.js';
@@ -375,9 +376,24 @@ export class ServerGame {
     if (winner) {
       this.state.winner = this.state.players.find((p) => p.id === winner.playerId)!.seat;
       this.state.phase = 'game-over';
+      this.applyUnfinishedHolesPenalty();
       return true;
     }
     return false;
+  }
+
+  private applyUnfinishedHolesPenalty(): void {
+    for (let i = 0; i < this.state.golfScores.length; i++) {
+      const gs = this.state.golfScores[i];
+      if (gs.isFinished) continue;
+      // Unfinished holes penalty (19 − h) per hole, plus any hazard strokes already on current hole
+      const penalty = holesNotCompletedPenalty(gs.currentHole) + gs.currentHoleStrokes;
+      this.state.golfScores[i] = {
+        ...gs,
+        totalStrokes: gs.totalStrokes + penalty,
+        totalRelativeToPar: gs.totalRelativeToPar + penalty,
+      };
+    }
   }
 
   private updateMatchScore(): void {
@@ -469,6 +485,24 @@ export class ServerGame {
 
     this.state.golfScores[gsIndex] = updated;
     this.state.pendingPegMovements.push(movement);
+
+    // Bumping rule: landing on an opponent's forward peg bumps them ahead 1 peghole
+    for (let i = 0; i < this.state.golfScores.length; i++) {
+      if (i === gsIndex) continue;
+      const opp = this.state.golfScores[i];
+      if (
+        !opp.isFinished &&
+        opp.currentHole === updated.currentHole &&
+        opp.currentPathId === updated.currentPathId &&
+        opp.currentPegholeIndex === updated.currentPegholeIndex
+      ) {
+        const oppHole = this.state.course.holes[opp.currentHole - 1];
+        const oppPath = oppHole?.paths.find(p => p.id === opp.currentPathId);
+        if (oppPath && opp.currentPegholeIndex + 1 < oppPath.pegholes.length) {
+          this.state.golfScores[i] = { ...opp, currentPegholeIndex: opp.currentPegholeIndex + 1 };
+        }
+      }
+    }
 
     // Update stakes for any holes just completed
     for (const holeNum of movement.holesCompleted) {

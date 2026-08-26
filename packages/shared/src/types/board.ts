@@ -13,7 +13,7 @@ export type PegholeType =
 export interface Peghole {
   id: string;
   holeNumber: number;
-  pathId: string;       // 'A' | 'B' | 'C'
+  pathId: string;       // 'LR' | 'S' | 'RL'
   index: number;        // position within path (0 = tee)
   type: PegholeType;
   isPar: boolean;
@@ -22,8 +22,8 @@ export interface Peghole {
 }
 
 export interface GolfPath {
-  id: string;           // 'A' | 'B' | 'C'
-  label: string;        // 'Safe' | 'Moderate' | 'Risky'
+  id: string;           // 'LR' | 'S' | 'RL'
+  label: string;        // 'Left-Right (LR)' | 'Straight (S)' | 'Right-Left (RL)'
   description: string;
   pegholes: Peghole[];  // ordered tee → cup
 }
@@ -49,8 +49,8 @@ export interface HazardResult {
   retreatToIndex: number | null;  // null means stay
   advanceBonus: number;           // extra pegholes to advance (dice outcome: advance3 = +2 net)
   description: string;
-  diceRoll?: [number, number];    // for sand/rough/three-putt dice mechanics
-  diceOutcome?: 'advance1' | 'stay-penalty' | 'advance3-strokeoff';
+  diceRoll?: [number, number];    // present when a dice check was performed
+  diceOutcome?: 'advance1' | 'advance2-doubles' | 'fail-penalty';
 }
 
 export interface PegMovement {

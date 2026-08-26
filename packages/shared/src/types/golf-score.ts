@@ -18,7 +18,7 @@ export interface PlayerGolfScore {
   holeScores: HoleScore[];
   currentHole: number;
   currentPegholeIndex: number;
-  currentPathId: string;                 // path currently being traversed ('A'|'B'|'C')
+  currentPathId: string;                 // path currently being traversed ('LR'|'S'|'RL')
   currentHoleStrokes: number;
   totalStrokes: number;
   totalRelativeToPar: number;
@@ -45,13 +45,13 @@ export function createInitialGolfScore(playerId: string): PlayerGolfScore {
     holeScores: [],
     currentHole: 1,
     currentPegholeIndex: 0,
-    currentPathId: 'A',
+    currentPathId: 'LR',
     currentHoleStrokes: 0,
     totalStrokes: 0,
     totalRelativeToPar: 0,
     holesCompleted: 0,
     isFinished: false,
-    selectedPaths: { 1: 'A' },
+    selectedPaths: { 1: 'LR' },
     pendingPathChoiceHole: 1,  // show path dialog for hole 1 just like subsequent holes
   };
 }

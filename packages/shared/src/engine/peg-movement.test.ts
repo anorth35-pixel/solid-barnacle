@@ -7,7 +7,7 @@ import type { GolfHole, GolfPath, Peghole } from '../types/board.js';
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 function makePeg(index: number, holeNumber: number, type: Peghole['type']): Peghole {
-  return { id: `h${holeNumber}-${index}`, holeNumber, pathId: 'A', index, type, isPar: true, x: 0, y: 0 };
+  return { id: `h${holeNumber}-${index}`, holeNumber, pathId: 'LR', index, type, isPar: true, x: 0, y: 0 };
 }
 
 /**
@@ -18,7 +18,7 @@ function makePeg(index: number, holeNumber: number, type: Peghole['type']): Pegh
 function makeHole(number: number, par: number, types: Peghole['type'][]): GolfHole {
   const allTypes: Peghole['type'][] = ['tee', ...types];
   const pegholes: Peghole[] = allTypes.map((t, i) => makePeg(i, number, t));
-  const path: GolfPath = { id: 'A', label: 'Safe', description: '', pegholes };
+  const path: GolfPath = { id: 'LR', label: 'Left-Right (LR)', description: '', pegholes };
   return { number, par, paths: [path], handicap: 1 };
 }
 
@@ -29,9 +29,9 @@ function atTee(holeNumber: number, extraHoles: GolfHole[] = []): ReturnType<type
     ...gs,
     currentHole: holeNumber,
     currentPegholeIndex: 0,
-    currentPathId: 'A',
+    currentPathId: 'LR',
     selectedPaths: Object.fromEntries(
-      [holeNumber, ...extraHoles.map(h => h.number)].map(n => [n, 'A'])
+      [holeNumber, ...extraHoles.map(h => h.number)].map(n => [n, 'LR'])
     ),
   };
 }
@@ -130,7 +130,7 @@ describe('double eagle', () => {
     const holes = [PAR3, PAR4];
     const gs: ReturnType<typeof atTee> = {
       ...atTee(1),
-      selectedPaths: { 1: 'A', 2: 'A' },
+      selectedPaths: { 1: 'LR', 2: 'LR' },
     };
     const { updated, movement } = advancePeg(gs, 8, holes);
     expect(movement.holesCompleted).toEqual([1, 2]);
@@ -151,25 +151,43 @@ describe('hazards', () => {
   // Hole with a water hazard at index 2: tee→fairway→water→green→cup (5 pegholes, 4 pts to cup)
   const WATER_HOLE: GolfHole = makeHole(1, 3, ['fairway', 'water', 'green', 'cup']);
 
-  it('water hazard on landing: +1 penalty, retreat 1, resulting in bogey', () => {
-    // Award exactly 2 pts so we land on the water hazard (index 2) with remaining=0
-    const gs = atTee(1);
-    const { updated } = advancePeg(gs, 2, [WATER_HOLE]);
-    // currentPegholeIndex should be 1 (retreated from 2)
-    expect(updated.currentPegholeIndex).toBe(1);
-    expect(updated.currentHoleStrokes).toBe(1); // +1 penalty from water
+  it('water hazard: dice check — make advances 1-2, fail gives +1/retreat 1', () => {
+    // Water uses the up-and-down dice mechanic (par on either die OR sum=par → make).
+    // Run 30 trials; each outcome must be make (advance) or fail (+1/retreat).
+    for (let i = 0; i < 30; i++) {
+      const gs = atTee(1);
+      const { updated } = advancePeg({ ...gs }, 2, [WATER_HOLE]);
+      if (updated.holeScores.length === 0) {
+        // Hole not finished — penalty must be 0 (made) or 1 (failed)
+        expect(updated.currentHoleStrokes).toBeGreaterThanOrEqual(0);
+        expect(updated.currentHoleStrokes).toBeLessThanOrEqual(1);
+        if (updated.currentHoleStrokes === 1) {
+          expect(updated.currentPegholeIndex).toBe(1); // failed: retreated 1
+        }
+      }
+      // If hole complete (doubles 3+3 → advance 2 to cup), relativeToPar must be ≤ 0
+      else {
+        expect(updated.holeScores[0].relativeToPar).toBeLessThanOrEqual(0);
+      }
+    }
   });
 
-  it('bogey when hole eventually completed after water hazard', () => {
-    // Step 1: land on water (index 2), takes penalty, retreats to 1
-    let gs = atTee(1);
-    ({ updated: gs } = advancePeg(gs, 2, [WATER_HOLE]));
-    // Step 2: advance from index 1 to cup (3 more pts needed)
-    const { updated } = advancePeg(gs, 5, [WATER_HOLE]);
-    const hs = updated.holeScores.find(h => h.holeNumber === 1)!;
-    expect(hs.relativeToPar).toBe(1); // bogey
-    expect(hs.penaltyStrokes).toBe(1);
-    expect(hs.isBirdie).toBe(false);
+  it('bogey when hole completed after a water fail', () => {
+    // Run trials until step 1 results in a water penalty, then verify bogey at completion.
+    for (let i = 0; i < 60; i++) {
+      let gs = atTee(1);
+      ({ updated: gs } = advancePeg({ ...gs }, 2, [WATER_HOLE]));
+      if (gs.currentHoleStrokes !== 1) continue; // step 1 was a make — retry
+      // Step 2: advance from index 1 to cup
+      const { updated } = advancePeg(gs, 5, [WATER_HOLE]);
+      if (updated.holeScores.length === 0) continue; // hole still not done
+      const hs = updated.holeScores.find(h => h.holeNumber === 1)!;
+      expect(hs.relativeToPar).toBe(1); // bogey
+      expect(hs.penaltyStrokes).toBe(1);
+      expect(hs.isBirdie).toBe(false);
+      return; // verified
+    }
+    // If water ALWAYS made up-and-down across 60 trials, the test is moot — that's astronomically unlikely
   });
 
   it('water hazard mid-action (not on last point) is passed through without triggering', () => {
@@ -195,36 +213,32 @@ describe('hazards', () => {
   // OOB at index 2: tee→fairway→out-of-bounds→green→cup
   const OOB_HOLE: GolfHole = makeHole(1, 3, ['fairway', 'out-of-bounds', 'green', 'cup']);
 
-  it('out-of-bounds on landing: +2 penalty, retreat to action start', () => {
+  it('out-of-bounds on landing: +2 penalty, retreat to tee (index 0)', () => {
     let gs = atTee(1);
-    // Move to index 1 first (not at tee for this action)
+    // Move to index 1 first (mid-hole position)
     ({ updated: gs } = advancePeg(gs, 1, [OOB_HOLE]));
-    // Land on OOB at index 2 — should retreat to index 1 (action start)
+    // Land on OOB at index 2 — must retreat to tee (0) regardless of action start
     const { updated } = advancePeg(gs, 1, [OOB_HOLE]);
-    expect(updated.currentPegholeIndex).toBe(1);
+    expect(updated.currentPegholeIndex).toBe(0);
     expect(updated.currentHoleStrokes).toBe(2);
   });
 
   // Sand hazard with deterministic dice override
   const SAND_HOLE: GolfHole = makeHole(1, 3, ['fairway', 'sand', 'green', 'cup']);
 
-  it('sand: penalty strokes stay in the range [−1, +1] regardless of dice', () => {
-    // advancePeg doesn't expose a dice override, so we run many trials and verify
-    // that the penalty outcome is always one of the three known dice results:
-    //   bad roll  → +1 penalty, peg stays at sand index
-    //   good roll → 0 penalty, advance 1
-    //   lucky     → −1 penalty (stroke credit), advance 3
+  it('sand: dice outcome is always make (0 penalty, advance 1-2) or fail (+1, stay)', () => {
+    // Real rules: par on either die OR sum=par → make; otherwise fail.
+    // Make: advance 1 (or 2 on doubles of par). Fail: +1 penalty, peg stays.
     const gs = atTee(1);
     for (let i = 0; i < 30; i++) {
       const { updated } = advancePeg({ ...gs }, 2, [SAND_HOLE]);
-      // If hole not complete, currentHoleStrokes must be −1, 0, or 1
       if (updated.holeScores.length === 0) {
-        expect(updated.currentHoleStrokes).toBeGreaterThanOrEqual(-1);
+        // Hole not finished — 0 penalty (make) or +1 (fail)
+        expect(updated.currentHoleStrokes).toBeGreaterThanOrEqual(0);
         expect(updated.currentHoleStrokes).toBeLessThanOrEqual(1);
       } else {
-        // Lucky advance3 completed the hole — relativeToPar must include the −1 stroke credit
-        const hs = updated.holeScores[0];
-        expect(hs.relativeToPar).toBeLessThanOrEqual(0); // lucky dice → never over par
+        // Hole finished via doubles-of-par advance 2 to cup — must be par or better
+        expect(updated.holeScores[0].relativeToPar).toBeLessThanOrEqual(0);
       }
     }
   });
@@ -238,7 +252,7 @@ describe('multi-hole advance', () => {
     const holes = [PAR3, PAR4];
     const gs: ReturnType<typeof atTee> = {
       ...atTee(1),
-      selectedPaths: { 1: 'A', 2: 'A' },
+      selectedPaths: { 1: 'LR', 2: 'LR' },
     };
     const { updated, movement } = advancePeg(gs, 10, holes);
     expect(movement.holesCompleted).toContain(1);
@@ -253,7 +267,7 @@ describe('multi-hole advance', () => {
       ...createInitialGolfScore('p1'),
       currentHole: 18,
       holesCompleted: 17,
-      selectedPaths: { 18: 'A' },
+      selectedPaths: { 18: 'LR' },
     };
     // pegholes.length points is always enough to sweep through hole 18 from tee
     const { updated } = advancePeg(gs, hole18.paths[0].pegholes.length, DEFAULT_COURSE.holes);
@@ -271,7 +285,7 @@ describe('finishing bonus', () => {
       ...createInitialGolfScore('p1'),
       currentHole: 18,
       holesCompleted: 17,
-      selectedPaths: { 18: 'A' },
+      selectedPaths: { 18: 'LR' },
     };
     // Enough points to complete from tee in one action → birdie (−1) + bonus (−2) = −3
     const { updated } = advancePeg(gs, hole18.paths[0].pegholes.length, DEFAULT_COURSE.holes, true);
