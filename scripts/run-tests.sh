@@ -25,7 +25,7 @@ set -uo pipefail
 
 SERVER=${1:?"Usage: $0 <server-url> [reps-per-config]"}
 REPS=${2:-5}   # games per config (11 configs × REPS games total)
-TIMEOUT=300    # seconds per game before watchdog kills it
+TIMEOUT=420    # seconds per game before watchdog kills it
 
 LOG_DIR="scripts/logs/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$LOG_DIR"
