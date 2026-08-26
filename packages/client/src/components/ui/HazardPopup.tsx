@@ -13,9 +13,9 @@ const HAZARD_INFO: Record<string, { emoji: string; label: string; color: string;
 };
 
 const OUTCOME_LABELS: Record<string, string> = {
-  'advance3-strokeoff': 'Lucky! Advance 3, −1 stroke',
-  'advance1':           'Safe! Advance 1 peghole',
-  'stay-penalty':       'Unlucky. Stay put, +1 stroke',
+  'advance1':        'Safe! Advance 1 peghole',
+  'advance2-doubles': 'Lucky doubles! Advance 2 pegholes',
+  'fail-penalty':    'Unlucky. +1 stroke',
 };
 
 export default function HazardPopup() {
@@ -67,8 +67,9 @@ export default function HazardPopup() {
             <div
               className={styles.outcome}
               style={{
-                color: data.diceOutcome === 'advance3-strokeoff' ? '#81c784'
-                     : data.diceOutcome === 'stay-penalty'       ? '#ef5350'
+                color: data.diceOutcome === 'fail-penalty'      ? '#ef5350'
+                     : data.diceOutcome === 'advance2-doubles'   ? '#81c784'
+                     : data.diceOutcome === 'advance1'           ? '#81c784'
                      : 'rgba(255,255,255,0.85)',
               }}
             >
