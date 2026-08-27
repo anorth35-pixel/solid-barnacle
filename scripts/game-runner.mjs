@@ -49,7 +49,7 @@ const CONFIGS = [
 
   // 1: stroke play, muggins ON
   { playerCount: 2, mode: 'remote', matchPlay: false,
-    mugginsEnabled: true,  mugginsWindowMs: 4000, manualScoring: false },
+    mugginsEnabled: true,  mugginsWindowMs: 1500, manualScoring: false },
 
   // 2: match play
   { playerCount: 2, mode: 'remote', matchPlay: true,
@@ -78,7 +78,7 @@ const CONFIGS = [
 
   // 7: skins + muggins
   { playerCount: 2, mode: 'remote', matchPlay: false,
-    mugginsEnabled: true, mugginsWindowMs: 4000, manualScoring: false,
+    mugginsEnabled: true, mugginsWindowMs: 1500, manualScoring: false,
     stakesConfig: { enabled: ['skins', 'sandies'], unitValues: { skins: 1, sandies: 1 } } },
 
   // ── 3-player ──────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ const CONFIGS = [
 
   // 9: stroke play, muggins ON
   { playerCount: 3, mode: 'remote', matchPlay: false,
-    mugginsEnabled: true,  mugginsWindowMs: 4000, manualScoring: false },
+    mugginsEnabled: true,  mugginsWindowMs: 1500, manualScoring: false },
 
   // 10: 3-player all stakes
   { playerCount: 3, mode: 'remote', matchPlay: false,
