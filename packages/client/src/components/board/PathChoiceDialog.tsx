@@ -81,7 +81,11 @@ export default function PathChoiceDialog({ holeNumber, hole }: Props) {
             return (
               <button
                 key={path.id}
-                className={`${styles.pathCard} ${styles[`path${path.id}`]}`}
+                className={styles.pathCard}
+                style={{
+                  background: pathColor + '22',
+                  borderColor: isHovered ? pathColor : pathColor + '55',
+                }}
                 onClick={() => choose(path.id)}
                 onMouseEnter={() => setHoveredPath(path.id)}
                 onMouseLeave={() => setHoveredPath(null)}
