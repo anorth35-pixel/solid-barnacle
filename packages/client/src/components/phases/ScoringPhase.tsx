@@ -30,7 +30,7 @@ export default function ScoringPhase({ breakdowns }: Props) {
   const player = players[playerSeat];
 
   // Reset when a new breakdown arrives
-  const breakdownKey = `${breakdown?.playerId ?? ''}-${items.length}`;
+  const breakdownKey = `${breakdown?.playerId ?? ''}-${items.length}-${isCrib ? 'crib' : 'hand'}`;
   const prevKeyRef = useRef(breakdownKey);
   if (prevKeyRef.current !== breakdownKey) {
     prevKeyRef.current = breakdownKey;
