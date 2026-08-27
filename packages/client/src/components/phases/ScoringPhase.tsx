@@ -29,11 +29,10 @@ export default function ScoringPhase({ breakdowns }: Props) {
   const playerSeat = players.findIndex((p) => p.id === breakdown?.playerId);
   const player = players[playerSeat];
 
-  // Reset when a new breakdown arrives
-  const breakdownKey = `${breakdown?.playerId ?? ''}-${items.length}-${isCrib ? 'crib' : 'hand'}`;
-  const prevKeyRef = useRef(breakdownKey);
-  if (prevKeyRef.current !== breakdownKey) {
-    prevKeyRef.current = breakdownKey;
+  // Reset when a new breakdown arrives — compare by reference; advanceScoringQueue always creates a new object
+  const prevBreakdownRef = useRef(currentScoringBreakdown);
+  if (prevBreakdownRef.current !== currentScoringBreakdown) {
+    prevBreakdownRef.current = currentScoringBreakdown;
     setRevealedCount(0);
     setPegCommitted(false);
   }
