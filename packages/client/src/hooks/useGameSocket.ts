@@ -218,8 +218,19 @@ export function useGameSocket() {
 
     socket.on('game:error', ({ message }: any) => store().setError(message));
 
-    socket.on('game:rejoined', ({ roomCode }: any) => {
-      // game:phase-change will arrive with the state and trigger navigation
+    socket.on('game:rejoined', ({ seat, roomCode }: any) => {
+      // Set mySeat now — game:phase-change arrives before this event so mySeat
+      // was null when setGameState ran. Re-apply seat-specific state now.
+      store().setMySeat(seat);
+      const gs = (store().gameState as any)?.golfScores?.[seat];
+      if (gs?.pendingPathChoiceHole != null) {
+        store().setPendingPathChoice({ holeNumber: gs.pendingPathChoiceHole });
+      }
+      // Re-sync hand if we're in the discarding phase
+      const gameState = store().gameState;
+      if (gameState?.phase === 'discarding' && gameState.players?.[seat]?.hand?.length > 0) {
+        store().setMyHand((gameState as any).players[seat].hand);
+      }
     });
 
     function checkHazardToasts(movements: any[]) {
