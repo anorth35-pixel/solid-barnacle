@@ -25,8 +25,9 @@ export function useGameSocket() {
     });
     socket.on('disconnect', () => store().setSocketId(''));
 
-    socket.on('room:created', ({ roomCode, room, sessionToken }: any) => {
+    socket.on('room:created', ({ roomCode, room, sessionToken, yourSeat }: any) => {
       store().setRoom(room, roomCode);
+      store().setMySeat(yourSeat ?? 0);
       if (sessionToken) localStorage.setItem('cribbgolf_session', sessionToken);
     });
 

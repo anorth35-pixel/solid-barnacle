@@ -27,7 +27,7 @@ export function registerSocketHandlers(io: Server, socket: Socket): void {
     const room = createRoom(socket.id, playerName, config);
     socket.join(room.code);
     const token = room.players[0].sessionToken;
-    socket.emit('room:created', { roomCode: room.code, room: toSummary(room), sessionToken: token });
+    socket.emit('room:created', { roomCode: room.code, room: toSummary(room), sessionToken: token, yourSeat: 0 });
     io.emit('room:list-updated', { rooms: getOpenRooms() });
   });
 
