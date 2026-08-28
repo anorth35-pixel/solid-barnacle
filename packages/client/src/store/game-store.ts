@@ -82,6 +82,7 @@ export interface GameStore {
   setCurrentScoringHand: (hand: { handCards: Card[]; starterCard: Card | null; isCrib: boolean } | null) => void;
   setPendingGolfScores: (scores: PlayerGolfScore[] | null) => void;
   commitPendingGolfScores: () => void;
+  updateQueuedGolfScores: (golfScores: PlayerGolfScore[]) => void;
   enqueueScoring: (item: ScoringQueueItem) => void;
   advanceScoringQueue: () => void;
   setPendingDeclaration: (d: PendingDeclaration | null) => void;
@@ -136,6 +137,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentScoringBreakdown: null,
       currentScoringHand: null,
       pendingGolfScores: null,
+      pendingPathChoice: null,
     });
     const mySeat = get().mySeat;
     if (mySeat !== null && (state as any).golfScores?.[mySeat]) {
@@ -182,6 +184,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pendingGolfScores: null,
     });
   },
+
+  // Propagate fresh golfScores to all queued scoring items so stale snapshots
+  // don't show a path-choice prompt that the server already cleared.
+  updateQueuedGolfScores: (golfScores) => set((s) => ({
+    scoringQueue: s.scoringQueue.map((item) => ({ ...item, golfScores })),
+  })),
 
   enqueueScoring: (item) => {
     if (!get().currentScoringBreakdown) {
