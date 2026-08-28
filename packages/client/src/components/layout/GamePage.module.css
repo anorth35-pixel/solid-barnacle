@@ -29,6 +29,7 @@
   background: rgba(0,0,0,0.3);
   flex-shrink: 0;
   overflow-x: auto;
+  align-items: center;
 }
 
 .playerBadge {
@@ -117,6 +118,85 @@
   .playerBadge { padding: 4px 8px; font-size: 0.78rem; }
   .scoreChip, .holeChip { font-size: 0.7rem; padding: 1px 5px; }
 }
+
+.quitBtn {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.quitBtn:hover {
+  background: rgba(220,38,38,0.25);
+  border-color: rgba(220,38,38,0.5);
+  color: #fca5a5;
+}
+
+.confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 600;
+}
+
+.confirmDialog {
+  background: #1c1c1c;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 320px;
+  width: 90%;
+  text-align: center;
+}
+
+.confirmText {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.confirmCancel {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.8);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.confirmCancel:hover { background: rgba(255,255,255,0.15); }
+
+.confirmQuit {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.confirmQuit:hover { background: #b91c1c; }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }

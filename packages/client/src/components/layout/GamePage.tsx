@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../../store/game-store.js';
 import { getSocket } from '../../socket/socket-client.js';
 import GolfCourseBoard from '../board/GolfCourseBoard.js';
@@ -17,7 +19,15 @@ import DisconnectedBanner from '../ui/DisconnectedBanner.js';
 import styles from './GamePage.module.css';
 
 export default function GamePage() {
-  const { gameState, mySeat, mugginsWindow, lastBreakdowns, pendingPathChoice, setPendingPathChoice, pendingDeclaration } = useGameStore();
+  const { gameState, mySeat, mugginsWindow, lastBreakdowns, pendingPathChoice, setPendingPathChoice, pendingDeclaration, reset } = useGameStore();
+  const navigate = useNavigate();
+  const [quitConfirm, setQuitConfirm] = useState(false);
+
+  function handleQuit() {
+    getSocket().emit('room:leave');
+    reset();
+    navigate('/');
+  }
 
   if (!gameState) {
     return <div className={styles.loading}>Connecting to game…</div>;
@@ -104,7 +114,22 @@ export default function GamePage() {
             <span className={styles.holeChip}>H{golfScores[i]?.currentHole ?? 1}</span>
           </div>
         ))}
+        <button className={styles.quitBtn} onClick={() => setQuitConfirm(true)} title="Quit game">
+          ✕ Quit
+        </button>
       </div>
+
+      {quitConfirm && (
+        <div className={styles.confirmOverlay}>
+          <div className={styles.confirmDialog}>
+            <p className={styles.confirmText}>Quit and return to the lobby?</p>
+            <div className={styles.confirmActions}>
+              <button className={styles.confirmCancel} onClick={() => setQuitConfirm(false)}>Keep Playing</button>
+              <button className={styles.confirmQuit} onClick={handleQuit}>Quit Game</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {mugginsWindow && <MugginsOverlay />}
       {pendingDeclaration && <ScoreDeclarationModal declaration={pendingDeclaration} />}

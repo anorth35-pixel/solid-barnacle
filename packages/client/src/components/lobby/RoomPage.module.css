@@ -6,10 +6,30 @@
   padding: 24px;
 }
 
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.82rem;
+  color: var(--gray);
+  cursor: pointer;
+  text-align: left;
+  width: fit-content;
+  transition: color 0.15s;
+}
+.backBtn:hover { color: var(--gray-dark); }
+
 .heading {
   font-size: 1.4rem;
   color: var(--gray-dark);
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .code {
@@ -19,11 +39,34 @@
   color: var(--green-dark);
 }
 
+.copyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
 .hint {
   font-size: 0.85rem;
   color: var(--gray);
-  margin-bottom: 24px;
+  margin: 0;
 }
+
+.copyBtn {
+  background: var(--gray-light);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.copyBtn:hover { background: #e0e0e0; }
 
 .players {
   display: flex;
