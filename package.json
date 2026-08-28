@@ -1,7 +1,9 @@
 {
   "name": "cribbgolf",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "npm run build -w packages/shared && concurrently \"npm run dev -w packages/server\" \"npm run dev -w packages/client\"",
     "build": "npm run build -w packages/shared && npm run build -w packages/server && npm run build -w packages/client",
@@ -13,5 +15,8 @@
     "concurrently": "^8.2.2",
     "socket.io-client": "^4.6.1",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "playwright": "^1.62.1"
   }
 }
