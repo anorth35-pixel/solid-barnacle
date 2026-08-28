@@ -62,6 +62,17 @@ export default function PathChoiceDialog({ holeNumber, hole }: Props) {
   function choose(pathId: string) {
     getSocket().emit('game:choose-path', { holeNumber, pathId });
     setPendingPathChoice(null);
+    // Optimistically clear pendingPathChoiceHole so myPendingPathHole resolves
+    // immediately — avoids the dialog re-opening if the server ignores a
+    // duplicate choose-path (e.g. stale snapshot in a queued scoring event).
+    const s = useGameStore.getState();
+    if (s.mySeat !== null && s.pendingGolfScores) {
+      const updated = s.pendingGolfScores.map((gs, i) =>
+        i === s.mySeat ? { ...gs, pendingPathChoiceHole: null } : gs
+      );
+      s.setPendingGolfScores(updated);
+      s.updateQueuedGolfScores(updated);
+    }
   }
 
   return (
