@@ -151,8 +151,31 @@ export const useGameStore = create<GameStore>((set, get) => ({
   patchGameState: (patch) => {
     const current = get().gameState;
     if (!current) return;
-    const next = { ...current, ...patch };
+
+    // Merge incoming golfScores carefully: socket events carry snapshots captured
+    // at emit time. If a stale snapshot has fewer selectedPaths than the current
+    // confirmed state, keep the confirmed state to prevent re-opening path dialogs
+    // that were already resolved.
+    let mergedGolfScores = patch.golfScores;
+    if (patch.golfScores && current.golfScores) {
+      mergedGolfScores = (patch.golfScores as any[]).map((gs: any, i: number) => {
+        const cur = (current.golfScores as any)[i];
+        if (!cur) return gs;
+        const curPaths = Object.keys(cur.selectedPaths ?? {}).length;
+        const newPaths = Object.keys(gs.selectedPaths ?? {}).length;
+        if (curPaths > newPaths) {
+          return { ...gs, selectedPaths: cur.selectedPaths, pendingPathChoiceHole: cur.pendingPathChoiceHole };
+        }
+        return gs;
+      });
+    }
+
+    const effectivePatch = mergedGolfScores !== patch.golfScores
+      ? { ...patch, golfScores: mergedGolfScores }
+      : patch;
+    const next = { ...current, ...effectivePatch };
     set({ gameState: next });
+
     // Auto-set pendingPathChoice if the server flagged one for this player
     const mySeat = get().mySeat;
     if (mySeat !== null && next.golfScores?.[mySeat]) {

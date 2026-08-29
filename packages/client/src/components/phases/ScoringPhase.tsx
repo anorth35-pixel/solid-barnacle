@@ -142,7 +142,9 @@ export default function ScoringPhase({ breakdowns }: Props) {
             <span className={styles.statusMoving}>⛳ Moving peg…</span>
           )
         ) : allRevealed ? (
-          myPendingPathHole != null ? (
+          currentScoringBreakdown === null ? (
+            <span className={styles.statusDone}>⛳ Starting next round…</span>
+          ) : myPendingPathHole != null ? (
             <span className={styles.pathHint}>Choose your path for hole {myPendingPathHole} →</span>
           ) : (
             <button className={styles.continueBtn} onClick={handleMovePeg}>
